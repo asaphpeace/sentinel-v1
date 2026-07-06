@@ -3,6 +3,13 @@
 .env.local
 .env.*.local
 backend/.env
+
+# ── SSH keys (never commit private keys) ──────────────────────────────────────
+key
+key.pub
+*.pem
+id_rsa*
+id_ed25519*
 backend/.env.local
 
 # ── Python ────────────────────────────────────────────────────────────────────
