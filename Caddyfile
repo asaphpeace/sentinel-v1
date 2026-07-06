@@ -1,0 +1,3 @@
+app.mailsentry.co.za {
+    reverse_proxy localhost:80
+}
