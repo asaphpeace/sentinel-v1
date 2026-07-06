@@ -1,0 +1,138 @@
+"""
+IMAP report ingestion service.
+
+Flow:
+  1. Connect to IMAP inbox (reports@mailsentry.co.za)
+  2. Fetch unseen messages
+  3. For each message:
+     a. Determine report type from content-type / filename:
+        - DMARC: .xml.gz / .xml.zip → DMARC aggregate XML (RFC 7489)
+        - TLS:   application/tlsrpt+gzip / .json.gz → TLS JSON (RFC 8460)
+     b. Extract domain slug from recipient subaddress (To: header)
+     c. Resolve domain from slug → domain_id
+     d. Parse and insert raw report + records
+     e. Trigger aggregation rebuild for that domain
+     f. Mark message as seen
+"""
+from __future__ import annotations
+
+import gzip
+import io
+import json
+import logging
+import zipfile
+from datetime import datetime, timezone
+from email import policy as email_policy
+from email.parser import BytesParser
+from typing import AsyncGenerator
+
+import aioimaplib
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.config import settings
+from app.database import AsyncSessionLocal
+from app.services.dmarc_parser import parse_dmarc_xml
+from app.services.tls_parser import parse_tls_json
+from app.services.dmarc_service import rebuild_aggregates
+from app.services.tls_service import rebuild_tls_aggregates
+
+log = logging.getLogger(__name__)
+
+
+async def _get_domain_by_slug(db: AsyncSession, slug: str):
+    from sqlalchemy import select
+    from app.models import Domain
+    result = await db.execute(select(Domain).where(Domain.reporting_slug == slug))
+    return result.scalar_one_or_none()
+
+
+def _extract_slug_from_to(to_header: str) -> str | None:
+    """Extract slug from addresses like d4a9f2b1@mailsentry.co.za."""
+    import re
+    match = re.search(r"([a-f0-9]{8})@" + re.escape(settings.reporting_domain), to_header, re.I)
+    return match.group(1) if match else None
+
+
+def _decompress(data: bytes, filename: str) -> bytes:
+    fname = filename.lower()
+    if fname.endswith(".gz"):
+        return gzip.decompress(data)
+    if fname.endswith(".zip"):
+        with zipfile.ZipFile(io.BytesIO(data)) as zf:
+            inner = zf.namelist()[0]
+            return zf.read(inner)
+    return data
+
+
+async def poll_inbox() -> None:
+    """Connect to IMAP and process all unseen report emails."""
+    imap = aioimaplib.IMAP4_SSL(host=settings.imap_host, port=settings.imap_port)
+    await imap.wait_hello_from_server()
+    await imap.login(settings.imap_user, settings.imap_password)
+    await imap.select("INBOX")
+
+    _, data = await imap.search("UNSEEN")
+    uids = data[0].split()
+    log.info("IMAP: %d unseen messages", len(uids))
+
+    for uid in uids:
+        try:
+            _, msg_data = await imap.fetch(uid, "(RFC822)")
+            raw = msg_data[1]
+            msg = BytesParser(policy=email_policy.default).parsebytes(raw)
+
+            to_header = msg.get("To", "") + msg.get("Delivered-To", "")
+            slug = _extract_slug_from_to(to_header)
+            if not slug:
+                log.warning("IMAP: no slug in To header '%s', skipping", to_header)
+                continue
+
+            async with AsyncSessionLocal() as db:
+                domain = await _get_domain_by_slug(db, slug)
+                if not domain:
+                    log.warning("IMAP: unknown slug %s, skipping", slug)
+                    continue
+
+                processed = False
+                for part in msg.iter_attachments():
+                    ct = part.get_content_type()
+                    filename = part.get_filename() or ""
+                    payload = part.get_payload(decode=True)
+                    if not payload:
+                        continue
+
+                    # Determine report type
+                    is_dmarc = (
+                        "xml" in ct or
+                        filename.endswith((".xml.gz", ".xml.zip", ".xml"))
+                    )
+                    is_tls = (
+                        "tlsrpt" in ct or
+                        "json" in ct or
+                        filename.endswith((".json.gz", ".json.zip", ".json"))
+                    )
+
+                    if is_dmarc:
+                        raw_bytes = _decompress(payload, filename)
+                        report = await parse_dmarc_xml(db, domain, raw_bytes.decode("utf-8", errors="replace"))
+                        # Still mark the message seen on a duplicate — there's nothing
+                        # further to do with it, and leaving it unseen would just
+                        # cause the same duplicate-detection log line every poll cycle.
+                        if report is not None:
+                            await rebuild_aggregates(db, domain.id)
+                        processed = True
+
+                    elif is_tls:
+                        raw_bytes = _decompress(payload, filename)
+                        report = await parse_tls_json(db, domain, raw_bytes.decode("utf-8", errors="replace"))
+                        if report is not None:
+                            await rebuild_tls_aggregates(db, domain.id)
+                        processed = True
+
+                if processed:
+                    await imap.store(uid, "+FLAGS", r"(\Seen)")
+
+        except Exception:
+            log.exception("IMAP: error processing uid %s", uid)
+
+    await imap.logout()

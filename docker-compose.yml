@@ -1,0 +1,85 @@
+services:
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: sentinel
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sentinel}
+      POSTGRES_DB: sentinel
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sentinel"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://sentinel:${POSTGRES_PASSWORD:-sentinel}@postgres:5432/sentinel
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY is required}
+      ALGORITHM: ${ALGORITHM:-HS256}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-60}
+
+      APP_BASE_URL: ${APP_BASE_URL:?APP_BASE_URL is required}
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+
+      IMAP_HOST: ${IMAP_HOST:-}
+      IMAP_PORT: ${IMAP_PORT:-993}
+      IMAP_USER: ${IMAP_USER:-}
+      IMAP_PASSWORD: ${IMAP_PASSWORD:-}
+      REPORTING_DOMAIN: ${REPORTING_DOMAIN:-}
+      MTA_STS_HOSTING_CNAME_TARGET: ${MTA_STS_HOSTING_CNAME_TARGET:-}
+
+      ADVISOR_PROVIDER: ${ADVISOR_PROVIDER:-ollama}
+      ADVISOR_ENABLED: ${ADVISOR_ENABLED:-true}
+      ADVISOR_LLM_URL: ${ADVISOR_LLM_URL:-http://host.docker.internal:11434}
+      ADVISOR_LLM_MODEL: ${ADVISOR_LLM_MODEL:-sentinel:latest}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ADVISOR_CLAUDE_MODEL: ${ADVISOR_CLAUDE_MODEL:-claude-haiku-4-5-20251001}
+
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      STRIPE_PRICE_STARTER_MONTHLY: ${STRIPE_PRICE_STARTER_MONTHLY:-}
+      STRIPE_PRICE_STARTER_ANNUAL: ${STRIPE_PRICE_STARTER_ANNUAL:-}
+      STRIPE_PRICE_PRO_MONTHLY: ${STRIPE_PRICE_PRO_MONTHLY:-}
+      STRIPE_PRICE_PRO_ANNUAL: ${STRIPE_PRICE_PRO_ANNUAL:-}
+      STRIPE_PRICE_MSP_MONTHLY: ${STRIPE_PRICE_MSP_MONTHLY:-}
+      STRIPE_PRICE_MSP_ANNUAL: ${STRIPE_PRICE_MSP_ANNUAL:-}
+
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY:-}
+      EMAIL_FROM_ADDRESS: ${EMAIL_FROM_ADDRESS:-noreply@foundationcraft.co.za}
+      EMAIL_FROM_NAME: ${EMAIL_FROM_NAME:-Sentinel}
+
+      IMAP_POLL_INTERVAL: ${IMAP_POLL_INTERVAL:-300}
+      CERT_PROBE_INTERVAL: ${CERT_PROBE_INTERVAL:-86400}
+      DNS_POLL_INTERVAL: ${DNS_POLL_INTERVAL:-3600}
+      RECOMMENDATION_INTERVAL: ${RECOMMENDATION_INTERVAL:-86400}
+      SCHEDULED_REPORT_CHECK_INTERVAL: ${SCHEDULED_REPORT_CHECK_INTERVAL:-86400}
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "${PORT:-80}:80"
+
+volumes:
+  postgres_data:

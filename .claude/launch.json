@@ -1,0 +1,30 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "sentinel-backend",
+      "runtimeExecutable": "C:\\Users\\User\\Documents\\Sentinel\\V1\\backend\\.venv\\Scripts\\python.exe",
+      "runtimeArgs": ["-m", "uvicorn", "app.main:app", "--reload", "--port", "8000"],
+      "cwd": "backend",
+      "port": 8000
+    },
+    {
+      "name": "sentinel-v1-frontend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "C:\\Users\\User\\Documents\\Sentinel\\V1\\frontend", "run", "dev"],
+      "port": 5173
+    },
+    {
+      "name": "sentinel-command-frontend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "C:\\Users\\User\\Documents\\Projects\\Command\\frontend", "run", "dev"],
+      "port": 5174
+    },
+    {
+      "name": "workspaceos-frontend",
+      "runtimeExecutable": "C:\\PROGRA~1\\nodejs\\node.exe",
+      "runtimeArgs": ["C:\\Users\\User\\Documents\\Projects\\Workspace OS\\frontend\\node_modules\\vite\\bin\\vite.js", "C:\\Users\\User\\Documents\\Projects\\Workspace OS\\frontend"],
+      "port": 5173
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "name": "sentinel-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@vueuse/core": "^10.10.0",
+    "pinia": "^2.1.7",
+    "vue": "^3.4.27",
+    "vue-router": "^4.3.2"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.0.4",
+    "@vitest/coverage-v8": "^4.1.9",
+    "@vue/test-utils": "^2.4.11",
+    "happy-dom": "^20.10.6",
+    "typescript": "^5.4.5",
+    "vite": "^5.2.11",
+    "vitest": "^4.1.9",
+    "vue-tsc": "^2.0.16"
+  }
+}

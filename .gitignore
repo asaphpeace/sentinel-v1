@@ -1,0 +1,54 @@
+# ── Environment / secrets ─────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+backend/.env
+backend/.env.local
+
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+.venv/
+.venv-prowler/
+.venv-iam-tools/
+venv/
+*.egg
+
+# ── Pytest / coverage ─────────────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+*.xml
+
+# ── Node / frontend ───────────────────────────────────────────────────────────
+node_modules/
+frontend/node_modules/
+frontend/dist/
+
+# ── Alembic ───────────────────────────────────────────────────────────────────
+# Keep migrations tracked — only ignore compiled cache
+backend/alembic/versions/__pycache__/
+
+# ── OS / editor ───────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/
+*.iml
+
+# ── Reports / temp outputs ────────────────────────────────────────────────────
+backend/reports/
+*.pdf
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+*.log
+logs/

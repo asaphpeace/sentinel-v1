@@ -1,0 +1,28 @@
+# Sentinel Command Tier 0 — Cloudsplaining, in its own isolated venv.
+#
+# Separate from BOTH the app's main .venv and Prowler's .venv-prowler.
+# Cloudsplaining needs boto3>=1.41.0; installing it into .venv-prowler
+# silently upgraded Prowler's exact-pinned boto3==1.40.61 there — found by
+# actually testing it (pip's resolver doesn't warn loudly enough to catch
+# this by inspection alone), not assumed safe because both are "just cloud
+# scanning tools."
+#
+# Setup (from backend/):
+#   py -3.12 -m venv .venv-iam-tools
+#   .venv-iam-tools/Scripts/pip install -r requirements-iam-tools.txt
+#
+# principalmapper is deliberately NOT included — see requirements-tools.txt's
+# sibling note and tools/cloudsplaining_privesc_scan.py's module docstring:
+# the latest published release (1.1.5) doesn't import on Python 3.10+
+# (removed collections.Mapping alias), and patching the installed package's
+# site-packages directly isn't the right fix. Cloudsplaining's own
+# privilege-escalation detection covers the same need without it.
+#
+# Invoked via tools/cloudsplaining_privesc_scan.py, called as a subprocess
+# from app/services/cloud_scan_service.py. `pytest` is included so
+# tools/test_cloudsplaining_privesc_scan.py can run standalone under this
+# venv's interpreter (it needs `cloudsplaining` itself, which the main app
+# test suite deliberately doesn't have installed).
+
+cloudsplaining
+pytest

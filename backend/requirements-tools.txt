@@ -1,0 +1,19 @@
+# Sentinel Command Tier 0 — Prowler, in its own isolated venv.
+#
+# Runs in backend/.venv-prowler, never in the app's main .venv — Prowler
+# pins exact versions (pydantic==2.12.5, boto3==1.40.61 at time of writing)
+# that conflict outright with this app's own pins in requirements.txt.
+# Confirmed via PyPI metadata before deciding to isolate rather than force
+# a shared version.
+#
+# Setup (from backend/):
+#   py -3.12 -m venv .venv-prowler   # Prowler 5.x requires Python <3.14
+#   .venv-prowler/Scripts/pip install -r requirements-tools.txt
+#
+# Cloudsplaining does NOT go in this venv — see requirements-iam-tools.txt
+# for why (its boto3 requirement conflicts with Prowler's exact pin, found
+# by testing, not assumed).
+#
+# Invoked as a subprocess from app/services/cloud_scan_service.py.
+
+prowler-cloud

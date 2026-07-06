@@ -1,0 +1,92 @@
+FROM qwen3:0.6b
+
+TEMPLATE """
+{{- $lastUserIdx := -1 -}}
+{{- range $idx, $msg := .Messages -}}
+{{- if eq $msg.Role "user" }}{{ $lastUserIdx = $idx }}{{ end -}}
+{{- end }}
+{{- if or .System .Tools }}<|im_start|>system
+{{ if .System }}
+{{ .System }}
+{{- end }}
+{{- if .Tools }}
+
+# Tools
+
+You may call one or more functions to assist with the user query.
+
+You are provided with function signatures within <tools></tools> XML tags:
+<tools>
+{{- range .Tools }}
+{"type": "function", "function": {{ .Function }}}
+{{- end }}
+</tools>
+
+For each function call, return a json object with function name and arguments within <tool_call></tool_call> XML tags:
+<tool_call>
+{"name": <function-name>, "arguments": <args-json-object>}
+</tool_call>
+{{- end -}}
+<|im_end|>
+{{ end }}
+{{- range $i, $_ := .Messages }}
+{{- $last := eq (len (slice $.Messages $i)) 1 -}}
+{{- if eq .Role "user" }}<|im_start|>user
+{{ .Content }}
+{{- if and $.IsThinkSet (eq $i $lastUserIdx) }}
+   {{- if $.Think -}}
+      {{- " "}}/think
+   {{- else -}}
+      {{- " "}}/no_think
+   {{- end -}}
+{{- end }}<|im_end|>
+{{ else if eq .Role "assistant" }}<|im_start|>assistant
+{{ if (and $.IsThinkSet (and .Thinking (or $last (gt $i $lastUserIdx)))) -}}
+<think>{{ .Thinking }}</think>
+{{ end -}}
+{{ if .Content }}{{ .Content }}
+{{- else if .ToolCalls }}<tool_call>
+{{ range .ToolCalls }}{"name": "{{ .Function.Name }}", "arguments": {{ .Function.Arguments }}}
+{{ end }}</tool_call>
+{{- end }}{{ if not $last }}<|im_end|>
+{{ end }}
+{{- else if eq .Role "tool" }}<|im_start|>user
+<tool_response>
+{{ .Content }}
+</tool_response><|im_end|>
+{{ end }}
+{{- if and (ne .Role "assistant") $last }}<|im_start|>assistant
+{{ if and $.IsThinkSet (not $.Think) -}}
+<think>
+
+</think>
+
+{{ end -}}
+{{ end }}
+{{- end }}"""
+
+SYSTEM """You are Sentinel Advisor. Output ONLY this JSON — no extra text before or after:
+{"message": "...", "commend": false, "citations": []}
+
+Rules:
+- message: 1-2 plain English sentences. Specific and actionable. Use the exact numbers provided.
+- commend: always false (computed server-side).
+- citations: always [].
+- DMARC stages weakest to strongest: none → quarantine → reject.
+- If DMARC policy is p=none: advise publishing a monitoring record.
+- If DMARC policy is p=quarantine: say the next step is p=reject after 30 days with no false positives.
+- If DMARC policy is p=reject: confirm fully enforced and advise monitoring for new sources.
+- If unprotected domains exist: prioritise publishing DMARC records for them.
+- Never suggest a stage the domain is already at.
+- Never explain what DMARC is. Skip definitions."""
+
+PARAMETER repeat_penalty 1
+PARAMETER stop <|im_start|>
+PARAMETER stop <|im_end|>
+PARAMETER temperature 0
+
+MESSAGE user Screen: dmarc\nDomain: northwind.com\nDAMARC policy: p=none\nDAMARC compliance rate: 72.5% of messages pass DMARC\nSending sources failing DMARC: legacy-mailer.partner.com\n\nProvide advisor output JSON.
+MESSAGE assistant {"message": "northwind.com is at p=none with 72.5% compliance — legacy-mailer.partner.com is failing DMARC and must be aligned or authorised before advancing to quarantine.", "commend": false, "citations": []}
+
+MESSAGE user Screen: posture\nPortfolio: 8 domains total\nDomains at p=reject (fully enforced): 5\nDomains with no DMARC record (unprotected): 2\nDomains at p=none or p=quarantine (in progress): 1\n\nProvide advisor output JSON.
+MESSAGE assistant {"message": "2 of your 8 domains have no DMARC record and are fully unprotected — publish monitoring records on those first before advancing the remaining domain from quarantine.", "commend": false, "citations": []}

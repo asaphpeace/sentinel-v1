@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sentinel — Email Security Posture</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#06060f;--txt:#eef1f8;--muted:#9098b5;--faint:#5b6285;--pink:#f5417a;--indigo:#5b6ef5;--indigo2:#8b5cf6;--amber:#f5c542;--teal:#2ee6c5;--good:#34e0a1;--warn:#f5c542;--bad:#ff4d6d;--crit:#ff2d55;--glass:linear-gradient(160deg,rgba(255,255,255,.05),rgba(255,255,255,.014));--line:rgba(255,255,255,.08);--line2:rgba(255,255,255,.14);--disp:'Sora',sans-serif;--body:'DM Sans',sans-serif;--mono:'JetBrains Mono',monospace}
+*{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}
+body{font-family:var(--body);color:var(--txt);font-size:13.5px;line-height:1.5;-webkit-font-smoothing:antialiased;min-height:100vh;background:radial-gradient(620px 420px at 6% 4%,rgba(46,230,197,.07),transparent 60%),radial-gradient(720px 520px at 96% 8%,rgba(91,110,245,.10),transparent 60%),radial-gradient(680px 600px at 50% 118%,rgba(245,65,122,.06),transparent 55%),radial-gradient(520px 520px at 102% 88%,rgba(139,92,246,.07),transparent 60%),var(--bg)}
+.app{display:grid;grid-template-columns:232px 1fr;min-height:100vh}
+.sidebar{margin:14px 0 14px 14px;border-radius:22px;padding:18px 14px;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.012));border:1px solid var(--line);backdrop-filter:blur(14px);display:flex;flex-direction:column;gap:4px;position:sticky;top:14px;height:calc(100vh - 28px);overflow-y:auto}
+.brand{display:flex;align-items:center;gap:11px;padding:4px 8px 14px}
+.logo{width:36px;height:36px;border-radius:11px;flex:none;display:grid;place-items:center;background:radial-gradient(circle at 30% 25%,#2ef5d4,#5b6ef5);box-shadow:0 0 22px rgba(46,230,197,.45)}
+.logo svg{width:19px;height:19px}
+.brand-name{font-family:var(--disp);font-weight:800;font-size:16px;letter-spacing:-.3px;line-height:1.1}
+.brand-name b{background:linear-gradient(90deg,#2ee6c5,#5b6ef5);-webkit-background-clip:text;background-clip:text;color:transparent}
+.brand-sub{font-family:var(--mono);font-size:8.5px;color:var(--teal);letter-spacing:1.4px;text-transform:uppercase}
+.tenant{margin:0 4px 4px;padding:9px 12px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid var(--line);display:flex;align-items:center;gap:9px}
+.tenant .tt{flex:1}.tenant .tn{font-size:12px;font-weight:600}.tenant .ts{font-size:9.5px;color:var(--faint);font-family:var(--mono)}
+.tenant .tg{font-family:var(--mono);font-size:8.5px;font-weight:700;padding:3px 7px;border-radius:6px;background:linear-gradient(90deg,#f5417a,#8b5cf6);color:#fff}
+.nav-label{font-family:var(--mono);font-size:9px;letter-spacing:1.4px;color:var(--faint);text-transform:uppercase;padding:12px 12px 5px}
+.nav-item{display:flex;align-items:center;gap:12px;padding:9px 13px;border-radius:12px;color:var(--muted);cursor:pointer;font-weight:500;font-size:13px;transition:all .16s ease}
+.nav-item svg{width:17px;height:17px;flex:none;opacity:.85}
+.nav-item:hover{background:rgba(255,255,255,.05);color:var(--txt)}
+.nav-item.active{background:linear-gradient(90deg,#5b6ef5,#8b5cf6);color:#fff;box-shadow:0 8px 24px rgba(91,110,245,.45)}
+.nav-item.active svg{opacity:1}.nav-item .num{font-family:var(--mono);font-size:9.5px;margin-left:auto;opacity:.55}
+.side-user{margin-top:auto;display:flex;align-items:center;gap:11px;padding:11px;border-radius:14px;background:rgba(255,255,255,.04);border:1px solid var(--line);cursor:pointer}
+.avatar{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#f5417a,#8b5cf6);display:grid;place-items:center;font-family:var(--disp);font-weight:700;font-size:14px;color:#fff;flex:none}
+.side-user .nm{font-size:12.5px;font-weight:600}.side-user .rl{font-size:10.5px;color:var(--faint)}
+.main{padding:14px 22px 60px}
+.topbar{display:flex;align-items:center;gap:14px;margin-bottom:20px}
+.search{flex:1;max-width:380px;display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:13px;padding:11px 15px}
+.search svg{width:16px;height:16px;color:var(--faint)}
+.search input{background:none;border:none;outline:none;color:var(--txt);font-family:var(--body);font-size:13px;width:100%}
+.search input::placeholder{color:var(--faint)}
+.tb-icons{display:flex;gap:9px;margin-left:auto}
+.iconbtn{width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid var(--line);display:grid;place-items:center;cursor:pointer;color:var(--muted);transition:.15s;position:relative}
+.iconbtn:hover{color:var(--txt);border-color:var(--line2)}.iconbtn svg{width:17px;height:17px}
+.iconbtn .badge{position:absolute;top:8px;right:9px;width:7px;height:7px;border-radius:50%;background:var(--pink);box-shadow:0 0 8px var(--pink)}
+.profile{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:13px;padding:6px 13px 6px 7px;cursor:pointer}
+.profile .nm{font-size:12.5px;font-weight:600;line-height:1.1}.profile .rl{font-size:10px;color:var(--faint)}
+.titlerow{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:16px;gap:16px;flex-wrap:wrap}
+.crumb{font-family:var(--mono);font-size:10px;color:var(--faint);letter-spacing:1.4px;text-transform:uppercase}
+h1{font-family:var(--disp);font-weight:800;font-size:25px;letter-spacing:-.7px;margin-top:5px}
+.sub{color:var(--muted);margin-top:5px;font-size:13px}
+.controls{display:flex;gap:10px}
+.ctl{display:flex;align-items:center;gap:9px;background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:12px;padding:10px 15px;font-family:var(--mono);font-size:12px;color:var(--txt);cursor:pointer}
+.ctl svg{width:15px;height:15px;color:var(--muted)}
+.screen{display:none;animation:fade .4s ease}.screen.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.card{background:var(--glass);border:1px solid var(--line);border-radius:18px;padding:20px;backdrop-filter:blur(12px);box-shadow:0 12px 40px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.05)}
+.ct{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}.ct h3{font-family:var(--disp);font-weight:700;font-size:15px}
+.sectag{font-family:var(--mono);font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--teal)}
+/* filters */
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.fpill{font-family:var(--mono);font-size:11.5px;padding:8px 14px;border-radius:20px;border:1px solid var(--line2);color:var(--muted);cursor:pointer;transition:.15s;background:rgba(255,255,255,.02)}
+.fpill:hover{color:var(--txt);border-color:var(--indigo)}
+.fpill.active{background:linear-gradient(90deg,#5b6ef5,#8b5cf6);color:#fff;border-color:transparent}
+.selwrap{position:relative}
+select.sel{appearance:none;background:rgba(255,255,255,.04);border:1px solid var(--line2);border-radius:12px;color:var(--txt);font-family:var(--mono);font-size:12px;padding:10px 34px 10px 14px;cursor:pointer}
+.selwrap svg{position:absolute;right:12px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:var(--muted);pointer-events:none}
+/* kpis */
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:16px}.kpis.six{grid-template-columns:repeat(6,1fr)}
+.kpi{background:var(--glass);border:1px solid var(--line);border-radius:16px;padding:16px;position:relative;overflow:hidden;backdrop-filter:blur(12px);transition:.18s}
+.kpi:hover{transform:translateY(-3px);border-color:var(--line2)}
+.kpi .top{display:flex;align-items:center;justify-content:space-between}
+.kpi .lab{font-family:var(--mono);font-size:9px;letter-spacing:.6px;text-transform:uppercase;color:var(--muted)}
+.kpi .dot{width:8px;height:8px;border-radius:50%}
+.kpi .val{font-family:var(--disp);font-weight:800;font-size:23px;letter-spacing:-1px;margin-top:9px}
+.kpi .delta{font-family:var(--mono);font-size:10px;margin-top:2px}
+.kpi .spark{position:absolute;right:13px;bottom:13px;width:50px;height:22px;opacity:.9}
+.r2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.r2c{display:grid;grid-template-columns:1.5fr 1fr;gap:16px;margin-bottom:16px}
+.r3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:16px}
+.legend{display:grid;grid-template-columns:1fr 1fr;gap:9px 16px;width:100%}
+.lg{display:flex;align-items:center;gap:9px;font-size:12px}.lg i{width:9px;height:9px;border-radius:3px;flex:none}.lg .v{margin-left:auto;font-family:var(--mono);color:var(--muted);font-size:11.5px}
+.areawrap{position:relative}.axis{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;color:var(--faint);margin-top:8px}
+.tooltip{position:absolute;background:#0c0c1c;border:1px solid var(--line2);border-radius:9px;padding:7px 11px;font-family:var(--mono);font-size:11px;box-shadow:0 8px 20px rgba(0,0,0,.5)}.tooltip b{color:var(--teal)}
+.btn{background:linear-gradient(90deg,#5b6ef5,#8b5cf6);color:#fff;border:none;border-radius:12px;padding:11px 18px;font-family:var(--disp);font-weight:700;font-size:13px;cursor:pointer;transition:.15s;display:inline-flex;align-items:center;gap:8px;box-shadow:0 8px 22px rgba(91,110,245,.4)}
+.btn:hover{filter:brightness(1.12)}.btn.ghost{background:rgba(255,255,255,.04);border:1px solid var(--line2);color:var(--txt);box-shadow:none}.btn.ghost:hover{border-color:var(--indigo);filter:none}.btn.sm{padding:8px 14px;font-size:12px;box-shadow:none}
+.code{background:rgba(0,0,0,.45);border:1px solid var(--line2);border-radius:11px;padding:13px;font-family:var(--mono);font-size:11.5px;color:#a8ecdf;overflow-x:auto;white-space:pre-wrap;word-break:break-word}.code .cm{color:var(--faint)}.code .hl{color:var(--amber)}
+/* advisor */
+.advisor{background:linear-gradient(160deg,rgba(91,110,245,.1),rgba(255,255,255,.012));border:1px solid var(--line2);border-radius:16px;padding:16px 18px;margin-bottom:16px;display:flex;gap:14px;align-items:flex-start;backdrop-filter:blur(12px)}
+.advisor.commend{background:linear-gradient(160deg,rgba(52,224,161,.1),rgba(255,255,255,.012));border-color:rgba(52,224,161,.3)}
+.advisor .orb{width:30px;height:30px;border-radius:50%;background:radial-gradient(circle at 30% 30%,#6ff7e0,#5b6ef5);box-shadow:0 0 18px rgba(46,230,197,.5);flex:none;margin-top:1px;animation:pulse 2.6s ease-in-out infinite}
+.advisor.commend .orb{background:radial-gradient(circle at 30% 30%,#9ff5cf,#34e0a1)}
+@keyframes pulse{50%{box-shadow:0 0 28px rgba(91,110,245,.8)}}
+.advisor .who{font-family:var(--mono);font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--teal);margin-bottom:5px}
+.advisor .msg{font-size:13px;line-height:1.65;color:#dbe0f2}.advisor .msg b{color:var(--teal)}.advisor.commend .msg b{color:var(--good)}
+/* generic expand drill */
+.exp .exp-body{display:none}.exp.open>.exp-body{display:block}
+.chev{color:var(--faint);transition:.2s;width:16px;height:16px}.exp.open>.exp-head .chev{transform:rotate(90deg);color:var(--teal)}
+.srchead{display:grid;grid-template-columns:1.7fr .85fr .85fr .95fr .75fr 1fr 20px;gap:11px;align-items:center;padding:13px 4px;cursor:pointer;border-bottom:1px solid var(--line)}
+.srchead:hover{background:rgba(255,255,255,.03)}
+.thead-row{display:grid;grid-template-columns:1.7fr .85fr .85fr .95fr .75fr 1fr 20px;gap:11px;font-family:var(--mono);font-size:9px;letter-spacing:.8px;text-transform:uppercase;color:var(--faint);padding:0 4px 11px;border-bottom:1px solid var(--line)}
+.src{display:flex;align-items:center;gap:11px}
+.srci{width:30px;height:30px;border-radius:9px;background:rgba(255,255,255,.06);display:grid;place-items:center;font-family:var(--disp);font-weight:700;font-size:12px;flex:none}
+.src .sn{font-size:13px;font-weight:600}.src .si{font-family:var(--mono);font-size:10px;color:var(--faint)}
+.vol{font-family:var(--mono);font-size:12.5px}
+.am{font-family:var(--mono);font-size:9.5px;font-weight:700;padding:4px 8px;border-radius:7px;display:inline-flex}
+.am.pass{background:rgba(52,224,161,.15);color:var(--good)}.am.fail{background:rgba(255,77,109,.15);color:var(--bad)}.am.warn{background:rgba(245,197,66,.15);color:var(--amber)}
+.cls{font-size:10px;font-weight:600;padding:5px 10px;border-radius:20px;width:fit-content}
+.cls.auth{background:rgba(52,224,161,.14);color:var(--good)}.cls.fwd{background:rgba(91,110,245,.16);color:#9aa6ff}.cls.unauth{background:rgba(245,197,66,.16);color:var(--amber)}.cls.susp{background:rgba(255,77,109,.16);color:var(--bad)}
+.ipwrap{padding:2px 6px 14px 50px}
+.iphead{display:grid;grid-template-columns:1.15fr 1.5fr .65fr .6fr .6fr .6fr 18px;gap:9px;font-family:var(--mono);font-size:8.5px;letter-spacing:.5px;text-transform:uppercase;color:var(--faint);padding:7px 0;border-bottom:1px solid var(--line)}
+.iprow{display:grid;grid-template-columns:1.15fr 1.5fr .65fr .6fr .6fr .6fr 18px;gap:9px;align-items:center;font-family:var(--mono);font-size:11px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04);cursor:pointer;color:var(--muted)}
+.iprow:hover{background:rgba(255,255,255,.02)}.iprow .ipa{color:var(--txt)}
+.miniam{font-size:8.5px;font-weight:700;padding:2px 6px;border-radius:5px;width:fit-content}
+.miniam.p{background:rgba(52,224,161,.15);color:var(--good)}.miniam.f{background:rgba(255,77,109,.15);color:var(--bad)}.miniam.w{background:rgba(245,197,66,.15);color:var(--amber)}
+.authwrap{padding:4px 6px 12px 40px}
+.authhead{display:grid;grid-template-columns:2.2fr .7fr .8fr .7fr;gap:9px;font-family:var(--mono);font-size:8.5px;letter-spacing:.5px;text-transform:uppercase;color:var(--faint);padding:6px 0;border-bottom:1px solid var(--line)}
+.authrow{display:grid;grid-template-columns:2.2fr .7fr .8fr .7fr;gap:9px;align-items:center;font-family:var(--mono);font-size:10.5px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.03);color:var(--muted)}
+.authrow:last-child{border:0}.authrow .ar{color:var(--txt)}
+/* traffic split */
+.split{display:flex;height:42px;border-radius:12px;overflow:hidden;margin-bottom:10px;background:rgba(255,255,255,.04)}
+.split .seg{display:flex;flex-direction:column;justify-content:center;padding:0 15px;color:#06121a;min-width:0;white-space:nowrap}
+.split .seg .sv{font-family:var(--disp);font-weight:800;font-size:15px}.split .seg .sl{font-family:var(--mono);font-size:8.5px;text-transform:uppercase;letter-spacing:.4px;opacity:.85}
+/* portfolio table */
+.pthead,.ptrow{display:grid;grid-template-columns:1.5fr .7fr .8fr 1.2fr 1.5fr 1.5fr 20px;gap:12px;align-items:center}
+.pthead{font-family:var(--mono);font-size:9px;letter-spacing:.8px;text-transform:uppercase;color:var(--faint);padding:0 12px 11px;border-bottom:1px solid var(--line)}
+.ptrow{padding:12px;border-radius:12px;cursor:pointer;transition:.15s;border:1px solid transparent}
+.ptrow:hover{background:rgba(255,255,255,.04);border-color:var(--line)}
+.pdn{font-family:var(--mono);font-size:12.5px;font-weight:600;display:flex;align-items:center;gap:10px}
+.pdn .pdi{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;font-family:var(--disp);font-weight:700;font-size:12px;flex:none}
+.comp{display:flex;align-items:center;gap:8px}.comp .cb{flex:1;height:6px;border-radius:5px;background:rgba(255,255,255,.07);overflow:hidden}.comp .cb i{display:block;height:100%;border-radius:5px}
+.comp .cn{font-family:var(--mono);font-size:11px;width:40px;text-align:right}
+.stg{font-family:var(--mono);font-size:9px;font-weight:700;padding:4px 9px;border-radius:7px;width:fit-content}
+.stg.reject,.stg.enforce{background:rgba(52,224,161,.16);color:var(--good)}.stg.quar,.stg.testing{background:rgba(91,110,245,.16);color:#9aa6ff}.stg.monitor{background:rgba(245,197,66,.16);color:var(--amber)}.stg.none{background:rgba(255,77,109,.16);color:var(--bad)}
+.pill{font-family:var(--mono);font-size:10px;font-weight:700;padding:4px 10px;border-radius:20px}
+.pill.ok{background:rgba(52,224,161,.15);color:var(--good)}.pill.danger{background:rgba(255,77,109,.16);color:var(--bad)}.pill.warnp{background:rgba(245,197,66,.16);color:var(--amber)}
+/* journey */
+.jhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.jhead .jt{font-family:var(--disp);font-weight:700;font-size:14.5px;display:flex;align-items:center;gap:9px}.jhead .jt svg{width:16px;height:16px;color:var(--teal)}
+.jbadge{font-family:var(--mono);font-size:9.5px;font-weight:700;padding:5px 11px;border-radius:20px;background:rgba(91,110,245,.16);color:#9aa6ff}
+.steps{display:flex;align-items:flex-start}.step{flex:1;text-align:center;position:relative}
+.step .node{width:34px;height:34px;border-radius:50%;margin:0 auto 9px;display:grid;place-items:center;border:2px solid var(--line2);background:#0c0c18;position:relative;z-index:2;font-family:var(--disp);font-weight:700;font-size:12px;color:var(--faint)}
+.step .node svg{width:15px;height:15px}
+.step.done .node{background:linear-gradient(135deg,#34e0a1,#2ee6c5);border-color:transparent;color:#04201b}
+.step.now .node{background:linear-gradient(135deg,#5b6ef5,#8b5cf6);border-color:transparent;color:#fff;box-shadow:0 0 18px rgba(91,110,245,.6)}
+.step .lbl{font-size:11.5px;font-weight:600}.step .sub2{font-family:var(--mono);font-size:9px;color:var(--faint);margin-top:3px}.step.lock .lbl{color:var(--muted)}
+.step::before{content:"";position:absolute;top:16px;left:-50%;width:100%;height:3px;background:var(--line2);z-index:1}.step:first-child::before{display:none}
+.step.done::before{background:#34e0a1}.step.now::before{background:linear-gradient(90deg,#34e0a1,#5b6ef5)}
+.nextaction{margin-top:20px;padding:13px 15px;border-radius:13px;background:rgba(91,110,245,.1);border:1px solid rgba(91,110,245,.3);display:flex;gap:11px;align-items:flex-start}
+.nextaction svg{width:17px;height:17px;color:#9aa6ff;flex:none;margin-top:1px}.nextaction .t{font-size:12.5px;line-height:1.55}.nextaction .t b{color:#fff}
+.track2{padding-left:4px}.tstep{position:relative;padding:0 0 4px 28px;margin-left:8px;border-left:2px solid var(--line2)}.tstep.last{border-left-color:transparent}
+.tn{position:absolute;left:-12px;top:-2px;width:23px;height:23px;border-radius:50%;display:grid;place-items:center;background:#0c0c18;border:2px solid var(--line2);font-family:var(--mono);font-size:10px;color:var(--faint)}
+.tstep.done .tn{background:linear-gradient(135deg,#34e0a1,#2ee6c5);border-color:transparent;color:#04201b}.tstep.done{border-left-color:#34e0a1}
+.tstep.now .tn{background:linear-gradient(135deg,#5b6ef5,#8b5cf6);border-color:transparent;color:#fff;box-shadow:0 0 14px rgba(91,110,245,.6)}
+.tn svg{width:12px;height:12px}.tbody{padding-bottom:18px}.tbody .th{font-weight:600;font-size:13.5px;display:flex;align-items:center;gap:9px}.tbody .tmeta{font-family:var(--mono);font-size:10.5px;color:var(--muted);margin-top:3px}
+.statetag{font-family:var(--mono);font-size:8.5px;font-weight:700;padding:3px 7px;border-radius:6px}.st-done{background:rgba(52,224,161,.15);color:var(--good)}.st-now{background:rgba(91,110,245,.16);color:#9aa6ff}.st-lock{background:rgba(144,152,181,.14);color:var(--muted)}
+/* misc */
+.donutwrap{display:flex;flex-direction:column;align-items:center;gap:13px}.donut{position:relative;width:140px;height:140px}.donut .ctr{position:absolute;inset:0;display:grid;place-items:center;text-align:center}.donut .g{font-family:var(--disp);font-weight:800;font-size:27px;line-height:1}.donut .s{font-family:var(--mono);font-size:9.5px;color:var(--muted);margin-top:2px}
+.certrow{display:grid;grid-template-columns:1.5fr 70px 1fr 80px;gap:14px;align-items:center;padding:13px 4px;border-bottom:1px solid var(--line)}.certrow:last-child{border:0}
+.cn{font-family:var(--mono);font-size:12px}.cn small{display:block;color:var(--faint);font-size:10px}.expbar{height:8px;border-radius:5px;background:rgba(255,255,255,.06);overflow:hidden}.expbar i{display:block;height:100%;border-radius:5px}
+.tl .l{display:flex;gap:13px;padding:13px 0;border-bottom:1px solid var(--line);align-items:flex-start}.tl .l:last-child{border:0}
+.tl .when{color:var(--faint);width:58px;flex:none;padding-top:1px;font-family:var(--mono);font-size:11.5px}
+.tl .ic2{width:26px;height:26px;border-radius:8px;flex:none;display:grid;place-items:center}
+.tl .ttx{flex:1}.tl .ttx b{font-weight:600;font-size:13px}.tl .ttx small{display:block;color:var(--muted);margin-top:2px;font-size:12px}
+.tl .dchip{font-family:var(--mono);font-size:10px;color:var(--teal);align-self:center;flex:none}
+.chg{font-family:var(--mono);font-size:9px;padding:3px 8px;border-radius:6px;font-weight:700;flex:none;align-self:center}.up{background:rgba(52,224,161,.15);color:var(--good)}.neu{background:rgba(91,110,245,.15);color:#9aa6ff}
+.reasonrow{display:grid;grid-template-columns:2fr .7fr;gap:12px;align-items:center;padding:11px 4px;border-bottom:1px solid var(--line);font-size:12.5px}.reasonrow:last-child{border:0}
+.reasonrow .rv{font-family:var(--mono);text-align:right}
+.tag{font-family:var(--mono);font-size:9px;letter-spacing:1px;color:#06060f;background:var(--teal);padding:3px 8px;border-radius:5px;font-weight:700;vertical-align:middle;margin-left:8px}
+.empty{text-align:center;padding:40px 20px;color:var(--muted)}.empty svg{width:40px;height:40px;color:var(--bad);margin-bottom:14px}
+.planfeat{display:flex;align-items:center;gap:10px;padding:9px 0;font-size:13px}.planfeat svg{width:16px;height:16px;color:var(--good);flex:none}
+.usagebar{height:7px;border-radius:5px;background:rgba(255,255,255,.07);overflow:hidden;margin-top:7px}.usagebar i{display:block;height:100%;border-radius:5px;background:linear-gradient(90deg,#5b6ef5,#8b5cf6)}
+.vbar{height:9px;border-radius:5px;overflow:hidden;display:flex;background:rgba(255,255,255,.07)}.vbar span{height:100%}
+.vbarlab{display:flex;justify-content:space-between;font-family:var(--mono);font-size:9px;margin-top:4px}
+.score{display:inline-flex;align-items:center}
+.shield{width:34px;height:38px;display:grid;place-items:center;font-family:var(--disp);font-weight:800;font-size:13px;color:#06060f;clip-path:polygon(50% 0,100% 16%,100% 60%,50% 100%,0 60%,0 16%)}
+.miniring{width:36px;height:36px;flex:none}
+.volbar .track{height:7px;border-radius:5px;background:rgba(255,255,255,.08);overflow:hidden}.volbar .track i{display:block;height:100%;border-radius:5px;background:linear-gradient(90deg,#34e0a1,#2ee6c5)}
+.sorth{cursor:pointer;display:inline-flex;align-items:center;gap:4px}.sorth svg{width:11px;height:11px;opacity:.55}.sorth:hover{color:var(--txt)}.sorth.act svg{opacity:1;color:var(--teal)}
+.trendbars{display:flex;align-items:flex-end;gap:8px;height:120px}
+.tb{flex:1;display:flex;flex-direction:column;justify-content:flex-end;min-height:2px}
+.tb .bf{width:100%;background:#ff4d6d;border-radius:4px 4px 0 0}
+.tb .bs{width:100%;background:linear-gradient(180deg,#2ee6c5,#159e87)}.tb .bs.rb{border-radius:4px 4px 0 0}
+.trendlabs{display:flex;gap:8px;margin-top:7px}.trendlabs span{flex:1;text-align:center;font-family:var(--mono);font-size:9px;color:var(--faint)}
+#backdrop{position:fixed;inset:0;background:rgba(3,4,12,.62);backdrop-filter:blur(3px);z-index:60;display:none}#backdrop.show{display:block}
+#drawer{position:fixed;top:0;right:0;height:100vh;width:430px;max-width:92vw;background:linear-gradient(160deg,#0c0e1c,#070710);border-left:1px solid var(--line2);z-index:70;transform:translateX(100%);transition:transform .28s ease;padding:22px;overflow-y:auto;box-shadow:-20px 0 60px rgba(0,0,0,.55)}#drawer.show{transform:none}
+.drhead,.mdhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}.drhead>span:first-child,.mdhead>span:first-child{font-family:var(--disp);font-weight:800;font-size:17px}
+.drx{cursor:pointer;color:var(--muted);font-size:15px;width:30px;height:30px;display:grid;place-items:center;border-radius:9px;border:1px solid var(--line);flex:none}.drx:hover{color:var(--txt);border-color:var(--line2)}
+.drlbl{font-family:var(--mono);font-size:9.5px;letter-spacing:1px;text-transform:uppercase;color:var(--faint);margin:16px 0 7px}
+.drtxt{font-size:13px;line-height:1.6;color:#d6dbf0}.evid{font-family:var(--mono);font-size:11.5px;color:var(--muted);line-height:1.95}
+.drfoot{font-family:var(--mono);font-size:10px;color:var(--faint);margin-top:18px;padding-top:12px;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px}
+.re{color:var(--teal);cursor:pointer}.re:hover{text-decoration:underline}
+#modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-46%);width:580px;max-width:94vw;max-height:88vh;overflow-y:auto;background:linear-gradient(160deg,#0c0e1c,#070710);border:1px solid var(--line2);border-radius:18px;z-index:70;padding:24px;opacity:0;pointer-events:none;transition:.25s;box-shadow:0 30px 80px rgba(0,0,0,.6)}#modal.show{opacity:1;pointer-events:auto;transform:translate(-50%,-50%)}
+.diff{font-family:var(--mono);font-size:12px;border-radius:11px;overflow:hidden;border:1px solid var(--line2)}.diff .dl{padding:10px 14px;white-space:pre-wrap;word-break:break-word}.diff .rem{background:rgba(255,77,109,.1);color:#ffb3c0}.diff .add{background:rgba(52,224,161,.1);color:#9ff5cf}
+#alertmenu{position:fixed;top:64px;right:118px;width:350px;max-width:92vw;background:linear-gradient(160deg,#0c0e1c,#070710);border:1px solid var(--line2);border-radius:16px;z-index:72;padding:14px;display:none;box-shadow:0 20px 50px rgba(0,0,0,.55)}#alertmenu.show{display:block}
+.amhead{font-family:var(--disp);font-weight:700;font-size:14px;display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.alert{display:flex;gap:11px;padding:11px 8px;border-radius:11px;cursor:pointer}.alert:hover{background:rgba(255,255,255,.04)}
+.alert .ad{width:8px;height:8px;border-radius:50%;margin-top:5px;flex:none}.alert .at{font-size:12.5px;font-weight:600}.alert .ab{font-size:11.5px;color:var(--muted);margin-top:3px;line-height:1.45}.alert .aw{font-family:var(--mono);font-size:9px;color:var(--teal);margin-top:5px}
+#fab{position:fixed;bottom:22px;right:22px;width:56px;height:56px;border-radius:50%;border:none;background:linear-gradient(135deg,#5b6ef5,#8b5cf6);box-shadow:0 10px 30px rgba(91,110,245,.5);cursor:pointer;z-index:55;display:grid;place-items:center;transition:.15s}#fab:hover{transform:scale(1.06)}#fab svg{width:24px;height:24px}
+#assistant{position:fixed;bottom:22px;right:22px;width:390px;max-width:92vw;height:580px;max-height:82vh;background:linear-gradient(160deg,#0c0e1c,#070710);border:1px solid var(--line2);border-radius:20px;z-index:75;display:none;flex-direction:column;box-shadow:0 30px 70px rgba(0,0,0,.6);overflow:hidden}#assistant.show{display:flex}
+.ashead{display:flex;align-items:center;gap:11px;padding:15px 18px;border-bottom:1px solid var(--line)}
+#asBody{flex:1;overflow-y:auto;padding:16px 18px;display:flex;flex-direction:column;gap:10px}
+.aschips{display:flex;gap:7px;flex-wrap:wrap;padding:0 16px 10px}
+.asbar{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--line)}.asbar .inp{padding:10px 13px;font-size:12.5px}.asbar .btn{padding:10px 13px}
+.bubble .cur{display:inline-block;width:7px;height:13px;background:var(--teal);vertical-align:middle;animation:blink .9s steps(1) infinite}
+.srcline{font-family:var(--mono);font-size:10px;color:var(--teal);margin-top:8px}
+#toast{position:fixed;bottom:92px;left:50%;transform:translateX(-50%) translateY(20px);background:#0c0e1c;border:1px solid var(--line2);border-radius:11px;padding:12px 18px;font-size:12.5px;z-index:90;opacity:0;pointer-events:none;transition:.25s;box-shadow:0 12px 30px rgba(0,0,0,.5)}#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.cls{cursor:pointer;position:relative}.cls .prov{display:inline-block;margin-right:6px;vertical-align:middle}.cls .prov.rule{width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.5}.cls .prov.ai{font-size:9px;color:var(--teal)}
+.cls.dashed{background:transparent!important;border:1px dashed currentColor}
+.cls.skel,.skel{background:linear-gradient(90deg,rgba(255,255,255,.05),rgba(255,255,255,.16),rgba(255,255,255,.05))!important;background-size:200% 100%!important;animation:shimmer 1.1s infinite;color:var(--faint)!important;border:0!important}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.advfoot{font-family:var(--mono);font-size:9.5px;color:var(--faint);margin-top:11px;display:flex;gap:9px;align-items:center}
+@media(max-width:1000px){.kpis,.kpis.six{grid-template-columns:repeat(2,1fr)}.r2,.r2c,.r3{grid-template-columns:1fr}.app{grid-template-columns:1fr}.sidebar{display:none}.pthead,.thead-row,.iphead,.authhead{display:none}.ptrow,.srchead,.iprow,.authrow{grid-template-columns:1fr 1fr;gap:8px}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand"><div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="#06060f" stroke-width="2.2"><path d="M22 6l-10 7L2 6"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg></div><div><div class="brand-name">Sen<b>tinel</b></div><div class="brand-sub">DMARC · MTA-STS</div></div></div>
+    <div class="tenant"><div class="tt"><div class="tn">Acme Group</div><div class="ts">6 domains</div></div><span class="tg">PREMIUM</span></div>
+    <div class="nav-label">Portfolio</div>
+    <div class="nav-item active" data-s="overview"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>All domains<span class="num">01</span></div>
+    <div class="nav-label">Analyze</div>
+    <div class="nav-item" data-s="posture"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg>Posture<span class="num">02</span></div>
+    <div class="nav-item" data-s="dmarc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 6l-10 7L2 6"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg>DMARC<span class="num">03</span></div>
+    <div class="nav-item" data-s="mtasts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>MTA-STS &amp; TLS<span class="num">04</span></div>
+    <div class="nav-label">Plan</div>
+    <div class="nav-item" data-s="journey"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>Roadmap<span class="num">05</span></div>
+    <div class="nav-item" data-s="certs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="6"/><path d="M9 13l-2 8 5-3 5 3-2-8"/></svg>Certificates<span class="num">06</span></div>
+    <div class="nav-item" data-s="timeline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>DNS Timeline<span class="num">07</span></div>
+    <div class="side-user" onclick="go('profile')"><div class="avatar">A</div><div><div class="nm">Asaph</div><div class="rl">Security Admin · Premium</div></div></div>
+  </aside>
+  <main class="main">
+    <div class="topbar">
+      <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg><input placeholder="Search domain, source, IP, record…"></div>
+      <div class="tb-icons"><div class="iconbtn" onclick="toggleAlerts(event)"><span class="badge"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg></div></div>
+      <div class="profile" onclick="go('profile')"><div class="avatar" style="width:30px;height:30px;font-size:12px">A</div><div><div class="nm">Asaph</div><div class="rl">Admin</div></div></div>
+    </div>
+
+    <section class="screen active" id="overview">
+      <div class="titlerow"><div><div class="crumb">01 / Portfolio</div><h1>All monitored domains</h1><div class="sub" id="ovsub"></div></div><div class="controls"><div class="ctl">Last 30 days<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></div><div class="btn ghost">+ Add domain</div></div></div>
+      <div class="kpis six" id="ovkpis"></div>
+      <div id="ovadvisor"></div>
+      <div class="card" id="volCard" style="margin-bottom:16px;padding:13px 18px"></div>
+      <div class="card"><div class="ct"><h3>Domains</h3><span class="sectag">DMARC &amp; TLS scored separately · click to drill in</span></div>
+        <div id="ovHead"></div>
+        <div id="ovtable"></div>
+      </div>
+    </section>
+
+    <section class="screen" id="posture">
+      <div class="titlerow"><div><div class="crumb">02 / Posture</div><h1 id="postureTitle"></h1><div class="sub">DMARC &amp; MTA-STS aggregate reports — compliant vs non-compliant sources, drillable to IP and volume.</div></div></div>
+      <div class="filters" id="postureFilters"></div>
+      <div id="postureAdvisor"></div>
+      <div id="postureBody"></div>
+    </section>
+
+    <section class="screen" id="dmarc">
+      <div class="titlerow"><div><div class="crumb">03 / DMARC Analyzer</div><h1 id="dmarcTitle"></h1><div class="sub">Source → IP → authentication status per aggregated volume. Expand any row, then any IP.</div></div></div>
+      <div class="filters" id="dmarcFilters"></div>
+      <div id="dmarcAdvisor"></div>
+      <div id="dmarcBody"></div>
+    </section>
+
+    <section class="screen" id="mtasts">
+      <div class="titlerow"><div><div class="crumb">04 / MTA-STS &amp; TLS</div><h1 id="mtaTitle"></h1><div class="sub">Passed and failed TLS negotiations — aggregated, with the reason behind each outcome.</div></div></div>
+      <div class="filters" id="mtaFilters"></div>
+      <div id="mtaAdvisor"></div>
+      <div id="mtaBody"></div>
+    </section>
+
+    <section class="screen" id="journey">
+      <div class="titlerow"><div><div class="crumb">05 / Roadmap</div><h1 id="roadTitle"></h1><div class="sub" id="roadSub"></div></div><div class="controls"><div class="selwrap"><select class="sel" id="roadSel" onchange="renderRoadmap(this.value)"></select><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></div></div></div>
+      <div id="roadAdvisor"></div>
+      <div id="roadBody"></div>
+    </section>
+
+    <section class="screen" id="certs">
+      <div class="titlerow"><div><div class="crumb">06 / Certificates</div><h1 id="certTitle"></h1><div class="sub">Certificates enforcement depends on, and time to expiry.</div></div></div>
+      <div class="filters" id="certFilters"></div>
+      <div id="certBody"></div>
+    </section>
+
+    <section class="screen" id="timeline">
+      <div class="titlerow"><div><div class="crumb">07 / DNS Timeline</div><h1>Tenant DNS change log</h1><div class="sub">Every recorded DNS change across all domains — the audit trail of the tenant's journey.</div></div>
+        <div class="controls"><div class="selwrap"><select class="sel" id="tlDom" onchange="renderTimeline()"></select><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></div><div class="selwrap"><select class="sel" id="tlDate" onchange="renderTimeline()"><option value="all">All dates</option><option value="jun">June 2026</option><option value="may">May 2026</option><option value="apr">April 2026</option></select><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></div></div></div>
+      <div class="card"><div id="timelineBody" class="tl"></div></div>
+    </section>
+
+    <section class="screen" id="profile">
+      <div class="titlerow"><div><div class="crumb">Account</div><h1>Profile &amp; plan</h1><div class="sub">Your account details and subscription.</div></div></div>
+      <div class="r2c">
+        <div class="card"><div class="ct"><h3>Profile</h3></div>
+          <div style="display:flex;align-items:center;gap:16px;margin-bottom:18px"><div class="avatar" style="width:60px;height:60px;font-size:26px;border-radius:16px">A</div><div><div style="font-family:var(--disp);font-weight:800;font-size:20px">Asaph</div><div style="color:var(--muted);font-size:13px">Security Administrator</div></div></div>
+          <div style="font-family:var(--mono);font-size:12.5px;line-height:2.3;color:var(--muted)">
+            <div>Email&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--txt)">asaph@acmegroup.com</span></div>
+            <div>Tenant&nbsp;&nbsp;&nbsp;<span style="color:var(--txt)">Acme Group</span></div>
+            <div>Role&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--txt)">Admin (full access)</span></div>
+            <div>2FA&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="pill ok" style="font-size:9px">ENABLED · TOTP</span></div>
+            <div>Joined&nbsp;&nbsp;&nbsp;<span style="color:var(--txt)">Apr 2026</span></div>
+          </div>
+          <div style="margin-top:18px;display:flex;gap:10px"><div class="btn ghost sm" style="padding:10px 16px">Edit profile</div><div class="btn ghost sm" style="padding:10px 16px">API keys</div></div>
+        </div>
+        <div class="card" style="background:linear-gradient(160deg,rgba(245,65,122,.1),rgba(139,92,246,.06));border-color:rgba(139,92,246,.3)">
+          <div class="ct"><h3>Subscription</h3><span class="tg" style="font-family:var(--mono);font-size:9px;font-weight:700;padding:4px 10px;border-radius:7px;background:linear-gradient(90deg,#f5417a,#8b5cf6);color:#fff">PREMIUM</span></div>
+          <div style="font-size:12.5px;color:var(--muted);margin-bottom:14px">Full DMARC + MTA-STS automation, AI advisor, and unlimited report ingestion.</div>
+          <div class="planfeat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>Up to 25 domains</div>
+          <div class="planfeat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>Unlimited DMARC &amp; TLS report ingestion</div>
+          <div class="planfeat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>Ollama AI advisor across all screens</div>
+          <div class="planfeat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>Hosted MTA-STS policy &amp; managed records</div>
+          <div style="margin-top:16px;font-size:12px;color:var(--muted)"><div style="display:flex;justify-content:space-between"><span>Domains used</span><span style="font-family:var(--mono);color:var(--txt)">6 / 25</span></div><div class="usagebar"><i style="width:24%"></i></div></div>
+          <div style="margin-top:14px"><div class="btn" style="width:100%;justify-content:center">Manage subscription</div></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+<div id="backdrop" onclick="closeOverlay()"></div>
+<aside id="drawer"><div class="drhead"><span id="drTitle"></span><span class="drx" onclick="closeOverlay()">✕</span></div><div id="drBody"></div></aside>
+<div id="modal"><div class="mdhead"><span id="mdTitle"></span><span class="drx" onclick="closeOverlay()">✕</span></div><div id="mdBody"></div></div>
+<div id="alertmenu"><div class="amhead">Alerts <span class="sectag">✦ AI-narrated</span></div><div id="amBody"></div></div>
+<button id="fab" onclick="toggleAssistant()" title="Ask Sentinel"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 3l1.9 5.8L19.5 9l-4.7 3.4L17.4 18 12 14.6 6.6 18l1.6-5.6L3.5 9l5.6-.2z"/></svg></button>
+<aside id="assistant"><div class="ashead"><div class="orb" style="width:26px;height:26px;border-radius:50%;background:radial-gradient(circle at 30% 30%,#6ff7e0,#5b6ef5);box-shadow:0 0 16px rgba(46,230,197,.5)"></div><div style="flex:1"><div style="font-family:var(--disp);font-weight:700;font-size:13px">Ask Sentinel</div><div id="asCtx" style="font-family:var(--mono);font-size:9px;color:var(--teal)">grounded on northwind.com</div></div><span class="drx" onclick="toggleAssistant()">✕</span></div><div id="asBody"></div><div class="aschips" id="asChips"></div><div class="asbar"><input id="asInput" class="inp" placeholder="Ask about this domain…" onkeydown="if(event.key==='Enter')sendAssistant()"><button class="btn" onclick="sendAssistant()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg></button></div></aside>
+<div id="toast"></div>
+<script>
+const fmt=n=>typeof n==='number'?n.toLocaleString():n;
+function am(v){const c=(v==='PASS'||v==='ALIGNED')?'pass':(v==='UNALIGNED'?'warn':'fail');return `<span class="am ${c}">${v}</span>`;}
+function mini(v){const m={p:['p','pass'],f:['f','fail'],w:['w','warn']}[v];return `<span class="miniam ${m[0]}">${m[1]}</span>`;}
+
+const DOMAINS={
+ 'northwind.com':{ic:'N',c:'#f5c542',dmarcStage:'monitor',dmarcLbl:'MONITOR',mta:'testing',mtaLbl:'TESTING',comp:92.4,tls:99.8,
+   dm:{policy:'p=none',pct:100,msgs:142902,pass:132041,unaligned:6580,fail:4281,
+     sources:[
+       {n:'Google Workspace',i:'google._domainkey · AS15169',c:'#5b6ef5',ic:'G',vol:78420,spf:'ALIGNED',dkim:'ALIGNED',dmr:'PASS',cls:['auth','Authorized'],
+         ips:[{ip:'209.85.220.41',r:'mail-sor.google.com',vol:41202,spf:'p',dkim:'p',dmr:'p',auth:[{a:'DKIM pass (aligned) · SPF pass (aligned)',al:'yes',d:'none',v:41000},{a:'DKIM pass · SPF softfail',al:'dkim',d:'none',v:202}]},
+              {ip:'142.250.27.26',r:'mail-ed.google.com',vol:22118,spf:'p',dkim:'p',dmr:'p',auth:[{a:'DKIM pass (aligned) · SPF pass (aligned)',al:'yes',d:'none',v:22118}]},
+              {ip:'209.85.128.49',r:'mail-yw.google.com',vol:15100,spf:'p',dkim:'p',dmr:'p',auth:[{a:'DKIM pass (aligned) · SPF pass (aligned)',al:'yes',d:'none',v:15100}]}]},
+       {n:'Mailchimp',i:'k2._domainkey · d=mcsv.net',c:'#f5c542',ic:'M',vol:18540,spf:'UNALIGNED',dkim:'UNALIGNED',dmr:'FAIL',cls:['unauth','Fix alignment'],
+         ips:[{ip:'198.2.145.30',r:'mail30.mcsv.net',vol:11240,spf:'w',dkim:'f',dmr:'f',auth:[{a:'DKIM pass but d=mcsv.net (not aligned)',al:'no',d:'none',v:11240}]},
+              {ip:'205.201.131.18',r:'mail131.mcsv.net',vol:7300,spf:'w',dkim:'f',dmr:'f',auth:[{a:'DKIM pass but d=mcsv.net (not aligned)',al:'no',d:'none',v:7300}]}]},
+       {n:'SendGrid',i:'s1._domainkey · AS11377',c:'#34e0a1',ic:'S',vol:9830,spf:'ALIGNED',dkim:'ALIGNED',dmr:'PASS',cls:['auth','Authorized'],
+         ips:[{ip:'149.72.166.10',r:'o1.sg.sendgrid.net',vol:9830,spf:'p',dkim:'p',dmr:'p',auth:[{a:'DKIM pass (aligned) · SPF pass (aligned)',al:'yes',d:'none',v:9830}]}]},
+       {n:'Acme Survey Tool',i:'no signature · AS40034',c:'#f5c542',ic:'A',vol:2140,spf:'FAIL',dkim:'NONE',dmr:'FAIL',cls:['unauth','Authorize / drop'],
+         ips:[{ip:'198.61.140.22',r:'send.acmesurvey.com',vol:2140,spf:'f',dkim:'f',dmr:'f',auth:[{a:'No DKIM signature · SPF fail',al:'no',d:'none',v:2140}]}]},
+       {n:'Unknown · spoofing',i:'no SPF · no DKIM · AS9009',c:'#ff4d6d',ic:'?',vol:1662,spf:'FAIL',dkim:'NONE',dmr:'FAIL',cls:['susp','Likely spoof'],
+         ips:[{ip:'185.220.101.34',r:'tor-exit',vol:902,spf:'f',dkim:'f',dmr:'f',auth:[{a:'No auth — forged header-from',al:'no',d:'none (would be reject)',v:902}]},
+              {ip:'185.220.101.78',r:'tor-exit',vol:760,spf:'f',dkim:'f',dmr:'f',auth:[{a:'No auth — forged header-from',al:'no',d:'none (would be reject)',v:760}]}]}
+     ]},
+   mt:{sessions:38447,pass:38371,fail:76,
+     passReasons:[{r:'TLS 1.3 · valid cert · MTA-STS policy matched',v:34890},{r:'TLS 1.2 · valid cert · policy matched',v:3481}],
+     failGroups:[{h:'legacy-mailer.partner.com',ip:'203.0.113.41',rep:'Google',s:41,reason:'STARTTLS not offered by sender'},
+                 {h:'smtp.oldvendor.net',ip:'198.51.100.7',rep:'Microsoft',s:35,reason:'policy fetch failed (stale id cached)'}]},
+   road:{dmarc:1,mta:2}},
+ 'acme.io':{ic:'A',c:'#34e0a1',dmarcStage:'reject',dmarcLbl:'REJECT',mta:'enforce',mtaLbl:'ENFORCE',comp:99.6,tls:100,
+   dm:{policy:'p=reject',pct:100,msgs:84300,pass:83963,unaligned:120,fail:217,
+     sources:[{n:'Google Workspace',i:'google._domainkey',c:'#5b6ef5',ic:'G',vol:61200,spf:'ALIGNED',dkim:'ALIGNED',dmr:'PASS',cls:['auth','Authorized'],ips:[{ip:'209.85.220.12',r:'mail-sor.google.com',vol:61200,spf:'p',dkim:'p',dmr:'p',auth:[{a:'DKIM pass (aligned) · SPF pass (aligned)',al:'yes',d:'none',v:61200}]}]},
+       {n:'SendGrid',i:'s1._domainkey',c:'#34e0a1',ic:'S',vol:22763,spf:'ALIGNED',dkim:'ALIGNED',dmr:'PASS',cls:['auth','Authorized'],ips:[{ip:'149.72.40.9',r:'o2.sg.sendgrid.net',vol:22763,spf:'p',dkim:'p',dmr:'p',auth:[{a:'DKIM pass (aligned) · SPF pass (aligned)',al:'yes',d:'none',v:22763}]}]},
+       {n:'Unknown · spoofing',i:'no auth · AS9009',c:'#ff4d6d',ic:'?',vol:217,spf:'FAIL',dkim:'NONE',dmr:'FAIL',cls:['susp','Rejected'],ips:[{ip:'185.220.102.8',r:'tor-exit',vol:217,spf:'f',dkim:'f',dmr:'f',auth:[{a:'No auth — rejected by policy',al:'no',d:'reject',v:217}]}]}]},
+   mt:{sessions:51200,pass:51200,fail:0,passReasons:[{r:'TLS 1.3 · valid cert · policy matched',v:51200}],failGroups:[]},
+   road:{dmarc:3,mta:3}},
+ 'globex.com':{ic:'G',c:'#34e0a1',dmarcStage:'reject',dmarcLbl:'REJECT',mta:'enforce',mtaLbl:'ENFORCE',comp:99.1,tls:99.9,
+   dm:{policy:'p=reject',pct:100,msgs:66100,pass:65506,unaligned:300,fail:294,
+     sources:[{n:'Microsoft 365',i:'selector1._domainkey',c:'#5b6ef5',ic:'M',vol:58000,spf:'ALIGNED',dkim:'ALIGNED',dmr:'PASS',cls:['auth','Authorized'],ips:[{ip:'40.107.0.10',r:'mail.protection.outlook.com',vol:58000,spf:'p',dkim:'p',dmr:'p',auth:[{a:'DKIM pass (aligned) · SPF pass (aligned)',al:'yes',d:'none',v:58000}]}]},
+       {n:'Unknown · spoofing',i:'no auth',c:'#ff4d6d',ic:'?',vol:294,spf:'FAIL',dkim:'NONE',dmr:'FAIL',cls:['susp','Rejected'],ips:[{ip:'45.13.0.7',r:'-',vol:294,spf:'f',dkim:'f',dmr:'f',auth:[{a:'No auth — rejected',al:'no',d:'reject',v:294}]}]}]},
+   mt:{sessions:44900,pass:44850,fail:50,passReasons:[{r:'TLS 1.3 · valid cert · policy matched',v:44850}],failGroups:[{h:'relay.smallisp.net',ip:'192.0.2.5',rep:'Google',s:50,reason:'expired certificate on sender side'}]},
+   road:{dmarc:3,mta:3}},
+ 'initech.net':{ic:'I',c:'#5b6ef5',dmarcStage:'quar',dmarcLbl:'QUARANTINE',mta:'testing',mtaLbl:'TESTING',comp:88,tls:97,
+   dm:{policy:'p=quarantine; pct=50',pct:50,msgs:38200,pass:33616,unaligned:3200,fail:1384,
+     sources:[{n:'Google Workspace',i:'google._domainkey',c:'#5b6ef5',ic:'G',vol:28000,spf:'ALIGNED',dkim:'ALIGNED',dmr:'PASS',cls:['auth','Authorized'],ips:[{ip:'209.85.221.7',r:'mail-sor.google.com',vol:28000,spf:'p',dkim:'p',dmr:'p',auth:[{a:'DKIM pass (aligned) · SPF pass (aligned)',al:'yes',d:'none',v:28000}]}]},
+       {n:'Zoho Campaigns',i:'zmail._domainkey',c:'#f5c542',ic:'Z',vol:6800,spf:'ALIGNED',dkim:'UNALIGNED',dmr:'FAIL',cls:['unauth','Fix alignment'],ips:[{ip:'136.143.190.4',r:'mx.zoho.com',vol:6800,spf:'p',dkim:'f',dmr:'f',auth:[{a:'SPF aligned · DKIM d=zoho (not aligned)',al:'spf',d:'quarantine',v:6800}]}]},
+       {n:'Unknown · spoofing',i:'no auth',c:'#ff4d6d',ic:'?',vol:1384,spf:'FAIL',dkim:'NONE',dmr:'FAIL',cls:['susp','Quarantined'],ips:[{ip:'91.200.12.3',r:'-',vol:1384,spf:'f',dkim:'f',dmr:'f',auth:[{a:'No auth — quarantined',al:'no',d:'quarantine',v:1384}]}]}]},
+   mt:{sessions:29400,pass:28518,fail:882,passReasons:[{r:'TLS 1.3 · valid cert · policy matched',v:28518}],failGroups:[{h:'mail.partnerco.com',ip:'203.0.113.90',rep:'Google',s:882,reason:'STARTTLS not offered by sender'}]},
+   road:{dmarc:2,mta:2}},
+ 'umbrella.co':{ic:'U',c:'#f5c542',dmarcStage:'monitor',dmarcLbl:'MONITOR',mta:'none',mtaLbl:'NONE',comp:64,tls:null,
+   dm:{policy:'p=none',pct:100,msgs:21500,pass:13760,unaligned:5100,fail:2640,
+     sources:[{n:'Google Workspace',i:'google._domainkey',c:'#5b6ef5',ic:'G',vol:12000,spf:'ALIGNED',dkim:'ALIGNED',dmr:'PASS',cls:['auth','Authorized'],ips:[{ip:'209.85.210.4',r:'mail-sor.google.com',vol:12000,spf:'p',dkim:'p',dmr:'p',auth:[{a:'DKIM pass (aligned) · SPF pass (aligned)',al:'yes',d:'none',v:12000}]}]},
+       {n:'HubSpot',i:'no aligned signature',c:'#f5c542',ic:'H',vol:6900,spf:'FAIL',dkim:'UNALIGNED',dmr:'FAIL',cls:['unauth','Fix alignment'],ips:[{ip:'54.174.52.1',r:'hubspotemail.net',vol:6900,spf:'f',dkim:'f',dmr:'f',auth:[{a:'DKIM d=hubspot (not aligned) · SPF fail',al:'no',d:'none',v:6900}]}]},
+       {n:'Unknown · spoofing',i:'no auth',c:'#ff4d6d',ic:'?',vol:2640,spf:'FAIL',dkim:'NONE',dmr:'FAIL',cls:['susp','Failing (no enforcement)'],ips:[{ip:'77.91.0.2',r:'-',vol:2640,spf:'f',dkim:'f',dmr:'f',auth:[{a:'No auth — but p=none, so still delivered',al:'no',d:'none',v:2640}]}]}]},
+   mt:null,road:{dmarc:1,mta:0}},
+ 'hooli.com':{ic:'H',c:'#ff4d6d',dmarcStage:'none',dmarcLbl:'NO RECORD',mta:'none',mtaLbl:'NONE',comp:null,tls:null,dm:null,mt:null,road:{dmarc:0,mta:0}}
+};
+const ORDER=['northwind.com','acme.io','globex.com','initech.net','umbrella.co','hooli.com'];
+const SCORE={'northwind.com':['B','#2ee6c5'],'acme.io':['A+','#34e0a1'],'globex.com':['A','#34e0a1'],'initech.net':['C','#f5c542'],'umbrella.co':['D','#f5a23d'],'hooli.com':['F','#ff4d6d']};
+const VERIF={'northwind.com':[[90,4,6],[88,5,7]],'acme.io':[[99.7,0.1,0.2],[99.5,0.2,0.3]],'globex.com':[[99.1,0.3,0.6],[98.8,0.5,0.7]],'initech.net':[[80,8,12],[85,6,9]],'umbrella.co':[[60,8,32],[58,10,32]],'hooli.com':null};
+ORDER.forEach(k=>{const d=DOMAINS[k];d.score=SCORE[k];d.verif=VERIF[k];d.vol=d.dm?d.dm.msgs:0;});
+function vbar(b){if(!b)return '<span style="color:var(--faint);font-family:var(--mono);font-size:11px">no data</span>';return `<div><div class="vbar"><span style="width:${b[0]}%;background:var(--good)"></span><span style="width:${b[1]}%;background:var(--amber)"></span><span style="width:${b[2]}%;background:var(--bad)"></span></div><div class="vbarlab"><span style="color:var(--good)">${b[0]}% aligned</span><span style="color:var(--amber)">${b[1]}% pass</span><span style="color:var(--bad)">${b[2]}% fail</span></div></div>`;}
+function shield(sc){return `<span class="score"><span class="shield" style="background:${sc[1]}">${sc[0]}</span></span>`;}
+function ring(pct,color){const r=15,c=2*Math.PI*r,off=c*(1-pct/100);return `<svg class="miniring" viewBox="0 0 36 36" style="transform:rotate(-90deg)"><circle cx="18" cy="18" r="${r}" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="4"/><circle cx="18" cy="18" r="${r}" fill="none" stroke="${color}" stroke-width="4" stroke-dasharray="${c}" stroke-dashoffset="${off}" stroke-linecap="round"/></svg>`;}
+function trendCard(m){const weeks=['8w','7w','6w','5w','4w','3w','2w','1w'];const base=Math.round(m.sessions/8);const data=weeks.map((w,i)=>{const s=Math.round(base*(0.82+i*0.025));const f=Math.max(0,Math.round((m.fail/8)*(8-i)/3));return {w,s,f};});const max=Math.max(...data.map(d=>d.s+d.f))||1;const bars=data.map(d=>`<div class="tb"><div class="bf" style="height:${d.f/max*100}%"></div><div class="bs ${d.f===0?'rb':''}" style="height:${d.s/max*100}%"></div></div>`).join('');const labs=data.map(d=>`<span>${d.w}</span>`).join('');return `<div class="card" style="margin-bottom:16px"><div class="ct"><h3>TLS sessions over time</h3><span class="sectag">negotiated vs failed · weekly</span></div><div class="trendbars">${bars}</div><div class="trendlabs">${labs}</div><div class="legend" style="grid-template-columns:1fr 1fr;margin-top:12px"><div class="lg"><i style="background:#2ee6c5"></i>Negotiated TLS</div><div class="lg"><i style="background:#ff4d6d"></i>Failed</div></div></div>`;}
+let OVSORT={key:'vol',dir:-1};
+
+/* ---------- ADVISOR ---------- */
+function advisor(screen,key){
+  let commend=false,who='Sentinel Advisor',msg='';
+  const d=DOMAINS[key];
+  if(screen==='portfolio'){msg=`Two domains — <b>acme.io</b> and <b>globex.com</b> — are fully enforced (p=reject + MTA-STS enforce); nothing to do but maintain. Your fastest win is <b>northwind.com</b>, one sender fix from quarantine. <b>hooli.com</b> has no DMARC record at all and is openly spoofable — start there.`;}
+  else if(key==='all'){msg=`Across the tenant, ${ORDER.filter(k=>DOMAINS[k].dmarcStage==='reject').length} of 6 domains are at reject and TLS enforcement is live on those. The drag on the average is <b>umbrella.co</b> (64%) and <b>hooli.com</b> (no record). Filter to a domain to see its sources and exactly what's blocking the next stage.`;}
+  else if(!d||!d.dm){msg=`<b>${key}</b> has no DMARC record yet, so there are no aggregate reports to interpret. Publish <b>p=none</b> first — I'll start collecting and tell you which senders to align.`;}
+  else if(d.dmarcStage==='reject'&&(screen!=='mta'||d.mta==='enforce')){commend=true;who='Sentinel Advisor · all clear';msg=`<b>${key}</b> is fully protected — p=reject with ${d.dm.pass.toLocaleString()} aligned messages and spoofing rejected. ${d.mt&&d.mt.fail===0?'TLS is at 100% with zero failures.':''} Nice work. Just keep an eye on certificate renewals; nothing else to change.`;}
+  else if(screen==='dmarc'){const bad=d.dm.sources.filter(s=>s.cls[0]==='unauth');msg=`${d.dm.pass.toLocaleString()} of ${d.dm.msgs.toLocaleString()} messages pass DMARC. The volume holding <b>${key}</b> back is ${bad.map(s=>'<b>'+s.n+'</b>').join(' and ')||'minimal'} — align ${bad.length>1?'those':'it'} and the only failing mail left is spoofing, which is what tightening the policy should block.`;}
+  else if(screen==='mta'){if(!d.mt){msg=`<b>${key}</b> has no MTA-STS policy yet. Publish one in <b>testing</b> mode and add a TLS-RPT record — I'll surface any delivery failures before you ever enforce.`;}else{msg=`${d.mt.pass.toLocaleString()} of ${d.mt.sessions.toLocaleString()} TLS negotiations succeeded. ${d.mt.fail===0?'Zero failures — eligible for enforce.':'The '+d.mt.fail+' failures are sender-side ('+d.mt.failGroups.map(f=>f.reason).join('; ')+') — worth a heads-up before enforcing.'}`;}}
+  else if(screen==='posture'){msg=`<b>${key}</b>: DMARC at <b>${d.dm.policy}</b> (${d.comp}% passing), MTA-STS <b>${d.mtaLbl.toLowerCase()}</b>. Expand a source below to see its IPs and message volumes, and which are authenticating.`;}
+  return `<div class="advisor${commend?' commend':''}"><div class="orb"></div><div><div class="who">${who} · Ollama</div><div class="msg">${msg}</div><div class="advfoot">✦ AI-generated · grounded on your reports · 3m ago <span class="re" onclick="toast('Re-running analysis on latest reports…')">↻ Regenerate</span></div></div></div>`;
+}
+
+/* ---------- source/IP/auth drill (DMARC) ---------- */
+function authRows(ip){return `<div class="exp-body"><div class="authwrap"><div class="authhead"><span>Authentication result</span><span>Aligned</span><span>Disposition</span><span>Volume</span></div>${ip.auth.map(a=>`<div class="authrow"><span class="ar">${a.a}</span><span>${a.al}</span><span>${a.d}</span><span class="ar">${fmt(a.v)}</span></div>`).join('')}</div></div>`;}
+function ipRows(s){return `<div class="exp-body"><div class="ipwrap"><div class="iphead"><span>Sending IP</span><span>rDNS</span><span>Volume</span><span>SPF</span><span>DKIM</span><span>DMARC</span><span></span></div>${s.ips.map(ip=>`<div class="exp"><div class="exp-head iprow"><span class="ipa">${ip.ip}</span><span>${ip.r}</span><span>${fmt(ip.vol)}</span>${mini(ip.spf)}${mini(ip.dkim)}${mini(ip.dmr)}<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></div>${authRows(ip)}</div>`).join('')}</div></div>`;}
+function srcBlocks(dm){return dm.sources.map((s,i)=>`<div class="exp"><div class="exp-head srchead"><div class="src"><div class="srci" style="color:${s.c}">${s.ic}</div><div><div class="sn">${s.n}</div><div class="si">${s.i}</div></div></div><div class="vol">${fmt(s.vol)}</div><div>${am(s.spf)}</div><div>${am(s.dkim)}</div><div>${am(s.dmr)}</div><div>${clsChip(CURKEY,i,s)}</div><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></div>${ipRows(s)}</div>`).join('');}
+
+/* ---------- screens ---------- */
+function domainFilters(containerId,current,fn,includeAll){
+  const el=document.getElementById(containerId);let h='';
+  if(includeAll)h+=`<div class="fpill${current==='all'?' active':''}" onclick="${fn}('all')">All domains</div>`;
+  ORDER.forEach(k=>h+=`<div class="fpill${current===k?' active':''}" onclick="${fn}('${k}')">${k}</div>`);
+  el.innerHTML=h;
+}
+
+/* OVERVIEW */
+function renderOverview(){
+  let dm=0,n=0,totalVol=0;ORDER.forEach(k=>{if(DOMAINS[k].comp!=null){dm+=DOMAINS[k].comp;n++;}totalVol+=DOMAINS[k].vol;});
+  document.getElementById('ovsub').innerHTML=`Acme Group · 6 domains · <b style="color:var(--txt)">${fmt(totalVol)}</b> messages and <b style="color:var(--txt)">96,114</b> TLS reports · last 30 days.`;
+  document.getElementById('ovkpis').innerHTML=`
+    <div class="kpi"><div class="top"><span class="lab">Domains</span><span class="dot" style="background:var(--indigo)"></span></div><div class="val">6</div><div class="delta" style="color:var(--muted)">monitored</div></div>
+    <div class="kpi"><div class="top"><span class="lab">At reject</span><span class="dot" style="background:var(--good)"></span></div><div class="val" style="color:var(--good)">2</div><div class="delta" style="color:var(--good)">fully enforced</div></div>
+    <div class="kpi"><div class="top"><span class="lab">In progress</span><span class="dot" style="background:var(--amber)"></span></div><div class="val" style="color:var(--amber)">3</div><div class="delta" style="color:var(--muted)">on the journey</div></div>
+    <div class="kpi"><div class="top"><span class="lab">Unprotected</span><span class="dot" style="background:var(--bad)"></span></div><div class="val" style="color:var(--bad)">1</div><div class="delta" style="color:var(--bad)">no DMARC</div></div>
+    <div class="kpi"><div class="top"><span class="lab">Avg DMARC</span><span class="dot" style="background:var(--good)"></span></div><div class="val" style="color:var(--good)">${(dm/n).toFixed(0)}%</div><div class="delta" style="color:var(--good)">▲ +5</div></div>
+    <div class="kpi"><div class="top"><span class="lab">Cert alerts</span><span class="dot" style="background:var(--warn)"></span></div><div class="val" style="color:var(--warn)">2</div><div class="delta" style="color:var(--warn)">&lt;30 days</div></div>`;
+  document.getElementById('ovadvisor').innerHTML=advisor('portfolio','all');
+  document.getElementById('volCard').innerHTML=`<div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap"><div style="font-family:var(--mono);font-size:10px;letter-spacing:1px;color:var(--muted)">VOLUME</div><div class="volbar" style="flex:1;min-width:200px"><div class="track"><i style="width:42%"></i></div></div><div style="font-family:var(--disp);font-weight:800;font-size:16px">${fmt(totalVol)}</div><div style="font-family:var(--mono);font-size:11px;color:var(--muted)">/ limit <b style="color:var(--teal)">∞</b> · Premium</div></div>`;
+  renderOvTable();
+}
+function setSort(k){if(OVSORT.key===k)OVSORT.dir*=-1;else{OVSORT.key=k;OVSORT.dir=-1;}renderOvTable();}
+function renderOvTable(){
+  const h=(label,key)=>`<span class="sorth ${OVSORT.key===key?'act':''}" onclick="setSort('${key}')">${label}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="transform:rotate(${OVSORT.key===key&&OVSORT.dir>0?180:0}deg)"><path d="M7 10l5 5 5-5"/></svg></span>`;
+  const head=document.getElementById('ovHead');head.className='pthead';
+  head.innerHTML=`<span>From domain</span>${h('Score','score')}${h('Volume','vol')}<span>% DMARC compliance</span><span>DKIM verification</span><span>SPF verification</span><span></span>`;
+  let arr=[...ORDER];const ord={'A+':6,'A':5,'B':4,'C':3,'D':2,'F':1};
+  arr.sort((a,b)=>{const da=DOMAINS[a],db=DOMAINS[b];let va,vb;if(OVSORT.key==='vol'){va=da.vol;vb=db.vol;}else{va=ord[da.score[0]];vb=ord[db.score[0]];}return (va-vb)*OVSORT.dir;});
+  document.getElementById('ovtable').innerHTML=arr.map(k=>{const d=DOMAINS[k];
+    const comp=d.comp!=null?`<div style="display:flex;align-items:center;gap:11px">${ring(d.comp,d.comp>95?'var(--good)':d.comp>75?'var(--amber)':'var(--bad)')}<div><div style="font-family:var(--disp);font-weight:700;font-size:15px">${d.comp}%</div><div style="font-family:var(--mono);font-size:9.5px;color:var(--muted)">${d.dm?d.dm.policy.replace('p=',''):'no record'}</div></div></div>`:`<div style="display:flex;align-items:center;gap:11px">${ring(0,'var(--bad)')}<span style="font-family:var(--mono);font-size:11px;color:var(--bad)">no record</span></div>`;
+    return `<div class="exp"><div class="exp-head ptrow"><div class="pdn"><span class="pdi" style="color:${d.c}">${d.ic}</span><div><div>${k}</div><div style="font-family:var(--mono);font-size:9px;color:var(--faint)">MTA-STS: ${d.mtaLbl.toLowerCase()}</div></div></div><div>${shield(d.score)}</div><div class="vol">${fmt(d.vol)}</div><div>${comp}</div><div>${vbar(d.verif?d.verif[0]:null)}</div><div>${vbar(d.verif?d.verif[1]:null)}</div><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="var(--faint)" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></div>${ovRowDetail(k,d)}</div>`;
+  }).join('');
+}
+function ovRowDetail(k,d){
+  if(!d.dm)return `<div class="exp-body"><div style="padding:16px 50px;color:var(--muted);font-size:13px">No aggregate reports yet — ${k} has no DMARC record. <span class="btn sm" style="margin-left:10px" onclick="openDomain('${k}')">Open →</span></div></div>`;
+  return `<div class="exp-body"><div class="ipwrap" style="padding-left:50px">
+    <div class="iphead" style="grid-template-columns:1.7fr .8fr .8fr .8fr .9fr"><span>Top sources</span><span>Volume</span><span>SPF</span><span>DKIM</span><span>DMARC</span></div>
+    ${d.dm.sources.slice(0,4).map(s=>`<div class="iprow" style="grid-template-columns:1.7fr .8fr .8fr .8fr .9fr;cursor:default"><span class="ipa">${s.n}</span><span>${fmt(s.vol)}</span>${mini(s.spf==='ALIGNED'?'p':(s.spf==='UNALIGNED'?'w':'f'))}${mini(s.dkim==='ALIGNED'?'p':(s.dkim==='UNALIGNED'?'w':'f'))}${mini(s.dmr==='PASS'?'p':'f')}</div>`).join('')}
+    <div style="padding-top:14px"><span class="btn sm" onclick="openDomain('${k}')">Open full analysis →</span></div>
+  </div></div>`;
+}
+function openDomain(k){PSTATE=k;DSTATE=k;MSTATE=k;CSTATE=k;renderPosture(k);renderDmarc(k);renderMta(k);renderCerts(k);go('posture');}
+
+/* POSTURE */
+let PSTATE='all';
+function renderPosture(key){PSTATE=key;CURKEY=key;domainFilters('postureFilters',key,'renderPosture',true);
+  document.getElementById('postureTitle').textContent = key==='all'?'Tenant posture — all domains':('Posture — '+key);
+  document.getElementById('postureAdvisor').innerHTML=advisor('posture',key==='all'?'all':key);
+  const body=document.getElementById('postureBody');
+  if(key==='all'){
+    let msgs=0,pass=0,sess=0,tpass=0;ORDER.forEach(k=>{const d=DOMAINS[k];if(d.dm){msgs+=d.dm.msgs;pass+=d.dm.pass;}if(d.mt){sess+=d.mt.sessions;tpass+=d.mt.pass;}});
+    body.innerHTML=`<div class="r2">
+      <div class="card"><div class="ct"><h3>DMARC aggregate</h3><span class="sectag">all domains</span></div>
+        <div class="split"><div class="seg" style="background:linear-gradient(90deg,#34e0a1,#2ee6c5);width:${(pass/msgs*100)}%"><span class="sv">${fmt(pass)}</span><span class="sl">Aligned · ${(pass/msgs*100).toFixed(1)}%</span></div><div class="seg" style="background:#ff4d6d;width:${100-(pass/msgs*100)}%"></div></div>
+        <div class="legend" style="grid-template-columns:1fr 1fr"><div class="lg"><i style="background:#34e0a1"></i>Passing<span class="v">${fmt(pass)}</span></div><div class="lg"><i style="background:#ff4d6d"></i>Failing<span class="v">${fmt(msgs-pass)}</span></div></div></div>
+      <div class="card"><div class="ct"><h3>MTA-STS / TLS aggregate</h3><span class="sectag">all domains</span></div>
+        <div class="split"><div class="seg" style="background:linear-gradient(90deg,#34e0a1,#2ee6c5);width:${(tpass/sess*100)}%"><span class="sv">${fmt(tpass)}</span><span class="sl">Negotiated · ${(tpass/sess*100).toFixed(1)}%</span></div><div class="seg" style="background:#ff4d6d;width:${100-(tpass/sess*100)}%"></div></div>
+        <div class="legend" style="grid-template-columns:1fr 1fr"><div class="lg"><i style="background:#34e0a1"></i>Success<span class="v">${fmt(tpass)}</span></div><div class="lg"><i style="background:#ff4d6d"></i>Failed<span class="v">${fmt(sess-tpass)}</span></div></div></div></div>
+      <div class="card"><div class="ct"><h3>By domain</h3><span class="sectag">expand → sources → IP → volume</span></div>
+      ${ORDER.filter(k=>DOMAINS[k].dm).map(k=>{const d=DOMAINS[k];
+        return `<div class="exp"><div class="exp-head srchead" style="grid-template-columns:1.7fr .85fr .85fr .95fr .75fr 1fr 20px"><div class="src"><div class="srci" style="color:${d.c}">${d.ic}</div><div><div class="sn">${k}</div><div class="si">${d.dm.policy} · ${d.mtaLbl.toLowerCase()}</div></div></div><div class="vol">${fmt(d.dm.msgs)}</div><div><span class="am ${d.comp>95?'pass':d.comp>75?'warn':'fail'}">${d.comp}%</span></div><div>${d.tls!=null?`<span class="am ${d.tls>99?'pass':'warn'}">${d.tls}%</span>`:'<span class="am warn">n/a</span>'}</div><div></div><div><span class="stg ${d.dmarcStage}">${d.dmarcLbl}</span></div><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></div>${ipWrapDomain(d)}</div>`;
+      }).join('')}</div>`;
+  } else {
+    const d=DOMAINS[key];
+    if(!d.dm){body.innerHTML=emptyState(key);return;}
+    body.innerHTML=`<div class="r2">
+      <div class="card"><div class="ct"><h3>DMARC aggregate</h3><span class="sectag">${d.dm.msgs.toLocaleString()} messages</span></div>
+        <div class="split"><div class="seg" style="background:linear-gradient(90deg,#34e0a1,#2ee6c5);width:${d.dm.pass/d.dm.msgs*100}%"><span class="sv">${fmt(d.dm.pass)}</span><span class="sl">Pass · ${(d.dm.pass/d.dm.msgs*100).toFixed(1)}%</span></div><div class="seg" style="background:#f5c542;width:${d.dm.unaligned/d.dm.msgs*100}%"></div><div class="seg" style="background:#ff4d6d;width:${d.dm.fail/d.dm.msgs*100}%"></div></div>
+        <div class="legend" style="grid-template-columns:repeat(3,1fr)"><div class="lg"><i style="background:#34e0a1"></i>Pass<span class="v">${fmt(d.dm.pass)}</span></div><div class="lg"><i style="background:#f5c542"></i>Unaligned<span class="v">${fmt(d.dm.unaligned)}</span></div><div class="lg"><i style="background:#ff4d6d"></i>Fail<span class="v">${fmt(d.dm.fail)}</span></div></div></div>
+      <div class="card"><div class="ct"><h3>MTA-STS / TLS aggregate</h3><span class="sectag">${d.mt?d.mt.sessions.toLocaleString()+' sessions':'no policy'}</span></div>
+        ${d.mt?`<div class="split"><div class="seg" style="background:linear-gradient(90deg,#34e0a1,#2ee6c5);width:${d.mt.pass/d.mt.sessions*100}%"><span class="sv">${fmt(d.mt.pass)}</span><span class="sl">Negotiated · ${(d.mt.pass/d.mt.sessions*100).toFixed(1)}%</span></div><div class="seg" style="background:#ff4d6d;width:${(d.mt.fail/d.mt.sessions*100)||0.4}%"></div></div><div class="legend" style="grid-template-columns:1fr 1fr"><div class="lg"><i style="background:#34e0a1"></i>Success<span class="v">${fmt(d.mt.pass)}</span></div><div class="lg"><i style="background:#ff4d6d"></i>Failed<span class="v">${fmt(d.mt.fail)}</span></div></div>`:`<div class="empty" style="padding:24px"><div>No MTA-STS policy published yet.</div></div>`}</div></div>
+      <div class="card"><div class="ct"><h3>Sources — compliant &amp; non-compliant</h3><span class="sectag">expand → IP → volume</span></div>
+        <div class="thead-row"><span>Source</span><span>Volume</span><span>SPF</span><span>DKIM</span><span>DMARC</span><span>Class</span><span></span></div>
+        ${srcBlocks(d.dm)}</div>`;
+  }
+}
+function ipWrapDomain(d){return `<div class="exp-body"><div class="ipwrap">${d.dm.sources.map(s=>`<div class="exp"><div class="exp-head iprow" style="grid-template-columns:1.5fr 1fr .6fr .6fr .6fr 18px"><span class="ipa">${s.n}</span><span>${s.i}</span><span>${fmt(s.vol)}</span><span></span><span>${am(s.dmr)}</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></div><div class="exp-body"><div class="authwrap" style="padding-left:30px">${s.ips.map(ip=>`<div class="authrow" style="grid-template-columns:1.2fr 1fr .6fr"><span class="ar">${ip.ip}</span><span>${ip.r}</span><span class="ar">${fmt(ip.vol)}</span></div>`).join('')}</div></div></div>`).join('')}</div></div>`;}
+function emptyState(key){return `<div class="card"><div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10.3 3.9l-8 13.9A2 2 0 0 0 4 21h16a2 2 0 0 0 1.7-3.2l-8-13.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg><div style="font-family:var(--disp);font-weight:700;font-size:16px;color:var(--txt)">${key} has no DMARC record</div><div style="margin-top:6px">It's openly spoofable. Publish <b style="color:var(--teal)">p=none</b> to start collecting reports — the advisor will guide the rest.</div><div style="margin-top:16px;display:flex;justify-content:center"><div class="btn">Generate p=none record</div></div></div></div>`;}
+
+/* DMARC */
+let DSTATE='northwind.com';
+function renderDmarc(key){if(DOMAINS[key]&&!DOMAINS[key].dm){key=key;}DSTATE=key;CURKEY=key;domainFilters('dmarcFilters',key,'renderDmarc',false);
+  const d=DOMAINS[key];document.getElementById('dmarcTitle').textContent='Who is sending as '+key+'?';
+  document.getElementById('dmarcAdvisor').innerHTML=advisor('dmarc',key);
+  const body=document.getElementById('dmarcBody');
+  if(!d.dm){body.innerHTML=emptyState(key);return;}
+  body.innerHTML=`<div class="card" style="margin-bottom:16px"><div class="ct"><h3>Pass vs fail traffic</h3><span class="sectag">${d.dm.msgs.toLocaleString()} messages</span></div>
+    <div class="split"><div class="seg" style="background:linear-gradient(90deg,#34e0a1,#2ee6c5);width:${d.dm.pass/d.dm.msgs*100}%"><span class="sv">${fmt(d.dm.pass)}</span><span class="sl">DMARC pass · ${(d.dm.pass/d.dm.msgs*100).toFixed(1)}%</span></div><div class="seg" style="background:#f5c542;width:${d.dm.unaligned/d.dm.msgs*100}%"></div><div class="seg" style="background:#ff4d6d;width:${d.dm.fail/d.dm.msgs*100}%"></div></div>
+    <div class="legend" style="grid-template-columns:repeat(3,1fr)"><div class="lg"><i style="background:#34e0a1"></i>Passing (aligned)<span class="v">${fmt(d.dm.pass)}</span></div><div class="lg"><i style="background:#f5c542"></i>Legit, unaligned<span class="v">${fmt(d.dm.unaligned)}</span></div><div class="lg"><i style="background:#ff4d6d"></i>Failing / spoof<span class="v">${fmt(d.dm.fail)}</span></div></div></div>
+    <div class="r2"><div class="card"><div class="ct"><h3>DKIM verification</h3><span class="sectag">share of volume</span></div>${vbar(d.verif?d.verif[0]:null)}</div><div class="card"><div class="ct"><h3>SPF verification</h3><span class="sectag">share of volume</span></div>${vbar(d.verif?d.verif[1]:null)}</div></div>
+    <div class="card"><div class="ct"><h3>Sending sources</h3><span class="re" style="font-family:var(--mono);font-size:11px;margin-left:12px;margin-right:auto" onclick="reanalyzeSources()">↻ Re-analyze</span><span class="sectag">source → IP → auth per volume</span></div>
+    <div class="thead-row"><span>Source</span><span>Volume</span><span>SPF</span><span>DKIM</span><span>DMARC</span><span>Class</span><span></span></div>
+    ${srcBlocks(d.dm)}</div>`;
+}
+
+/* MTA-STS */
+let MSTATE='northwind.com';
+function renderMta(key){MSTATE=key;domainFilters('mtaFilters',key,'renderMta',false);
+  const d=DOMAINS[key];document.getElementById('mtaTitle').textContent='TLS negotiations — '+key;
+  document.getElementById('mtaAdvisor').innerHTML=advisor('mta',key);
+  const body=document.getElementById('mtaBody');
+  if(!d.mt){body.innerHTML=`<div class="card"><div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><div style="font-family:var(--disp);font-weight:700;font-size:16px;color:var(--txt)">${key} has no MTA-STS policy</div><div style="margin-top:6px">Publish a policy in <b style="color:var(--teal)">testing</b> mode and add a TLS-RPT record to start collecting delivery reports.</div><div style="margin-top:16px;display:flex;justify-content:center"><div class="btn">Generate testing policy</div></div></div></div>`;return;}
+  const m=d.mt;
+  body.innerHTML=`<div class="card" style="margin-bottom:16px"><div class="ct"><h3>TLS negotiation outcomes</h3><span class="sectag">${m.sessions.toLocaleString()} sessions · 14 days</span></div>
+    <div class="split"><div class="seg" style="background:linear-gradient(90deg,#34e0a1,#2ee6c5);width:${m.pass/m.sessions*100}%"><span class="sv">${fmt(m.pass)}</span><span class="sl">Negotiated · ${(m.pass/m.sessions*100).toFixed(1)}%</span></div><div class="seg" style="background:#ff4d6d;width:${(m.fail/m.sessions*100)||0.5}%"></div></div>
+    <div class="legend" style="grid-template-columns:1fr 1fr"><div class="lg"><i style="background:#34e0a1"></i>Successful<span class="v">${fmt(m.pass)}</span></div><div class="lg"><i style="background:#ff4d6d"></i>Failed<span class="v">${fmt(m.fail)}</span></div></div></div>
+    ${trendCard(m)}
+    <div class="r2">
+      <div class="card"><div class="ct"><h3>Why sessions passed</h3><span class="sectag">aggregated</span></div>${m.passReasons.map(p=>`<div class="reasonrow"><span>${p.r}</span><span class="rv" style="color:var(--good)">${fmt(p.v)}</span></div>`).join('')}</div>
+      <div class="card"><div class="ct"><h3>Why sessions failed</h3><span class="sectag">${m.failGroups.length} group(s)</span></div>
+      ${m.failGroups.length?`<div class="thead-row" style="grid-template-columns:1.6fr 1fr .8fr 1.3fr 20px"><span>Sending host</span><span>Reporter</span><span>Sessions</span><span>Reason</span><span></span></div>`+m.failGroups.map(f=>`<div class="exp"><div class="exp-head srchead" style="grid-template-columns:1.6fr 1fr .8fr 1.3fr 20px"><div class="src"><div class="srci" style="color:#f5c542">${f.h[0].toUpperCase()}</div><div><div class="sn">${f.h}</div><div class="si">${f.ip}</div></div></div><div class="vol" style="color:var(--muted)">${f.rep}</div><div class="vol">${f.s}</div><div><span class="am warn">${f.reason.split(' ').slice(0,3).join(' ')}</span></div><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></div><div class="exp-body"><div class="authwrap"><div class="authrow" style="grid-template-columns:1fr"><span class="ar">${f.reason}. In <b>testing</b> mode delivery still succeeded (logged only); under <b>enforce</b> these ${f.s} sessions would be refused. Notify the sender before flipping enforce.</span></div></div></div></div>`).join(''):`<div class="empty" style="padding:24px;color:var(--good)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg><div>Zero failures in the reporting window.</div></div>`}</div>
+    </div>`;
+}
+
+/* ROADMAP */
+function renderRoadmap(key){
+  const sel=document.getElementById('roadSel');if(sel.value!==key)sel.value=key;
+  document.getElementById('roadAdvisor').innerHTML=advisor(key==='all'?'posture':'mta',key==='all'?'all':key).replace('posture','');
+  const body=document.getElementById('roadBody');
+  if(key==='all'){
+    document.getElementById('roadTitle').textContent='Roadmap — portfolio';
+    document.getElementById('roadSub').textContent='Where every domain stands on the two journeys. Select a domain for its projection.';
+    document.getElementById('roadAdvisor').innerHTML=advisor('all','all');
+    body.innerHTML=`<div class="card"><div class="ct"><h3>Journey status by domain</h3><span class="sectag">DMARC · MTA-STS</span></div>
+      ${ORDER.map(k=>{const d=DOMAINS[k];const dn=['No record','Monitor','Quarantine','Reject','BIMI'][d.road.dmarc];const mn=['None','Testing','Enforce'][d.road.mta];
+        return `<div class="ptrow" style="grid-template-columns:1.4fr 1fr 1fr 1fr;cursor:pointer" onclick="renderRoadmap('${k}')"><div class="pdn"><span class="pdi" style="color:${d.c}">${d.ic}</span>${k}</div><div style="font-family:var(--mono);font-size:11.5px">DMARC: <b style="color:${d.road.dmarc>=3?'var(--good)':d.road.dmarc>=2?'#9aa6ff':'var(--amber)'}">${dn}</b></div><div style="font-family:var(--mono);font-size:11.5px">MTA: <b style="color:${d.road.mta>=2?'var(--good)':d.road.mta>=1?'#9aa6ff':'var(--bad)'}">${mn}</b></div><div style="text-align:right"><span class="fpill" style="display:inline-block">View projection →</span></div></div>`;
+      }).join('')}</div>`;
+    return;
+  }
+  const d=DOMAINS[key];
+  document.getElementById('roadTitle').textContent='Roadmap — '+key;
+  document.getElementById('roadSub').textContent='Historic posture and projected path to full enforcement.';
+  const dStage=d.road.dmarc,mStage=d.road.mta;
+  const dSteps=['Created','Monitor','Quarantine','Reject','BIMI'];
+  const mSteps=['None','Testing','Enforce'];
+  function stepHtml(steps,cur){return steps.map((s,i)=>`<div class="step ${i<cur?'done':i===cur?'now':'lock'}"><div class="node">${i<cur?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>':(i===4?'★':i+1)}</div><div class="lbl">${s}</div></div>`).join('');}
+  body.innerHTML=`
+    <div class="card" style="margin-bottom:16px"><div class="ct"><h3>Posture projection</h3><span class="sectag">history → forecast</span></div>
+      <div class="areawrap"><svg viewBox="0 0 640 180" style="width:100%;height:160px" preserveAspectRatio="none"><defs><linearGradient id="rg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="rgba(46,230,197,.35)"/><stop offset="100%" stop-color="rgba(46,230,197,0)"/></linearGradient></defs>
+        <line x1="320" y1="0" x2="320" y2="160" stroke="rgba(255,255,255,.1)" stroke-dasharray="4 4"/>
+        <path d="M20,140 L120,120 L220,96 L320,${160-d.comp*1.4} L320,${160-d.comp*1.4} L320,160 L20,160 Z" fill="url(#rg)"/>
+        <path d="M20,140 L120,120 L220,96 L320,${160-d.comp*1.4}" fill="none" stroke="#34e0a1" stroke-width="3"/>
+        <path d="M320,${160-d.comp*1.4} L440,${160-Math.min(98,d.comp+4)*1.4} L540,40 L620,28" fill="none" stroke="#5b6ef5" stroke-width="3" stroke-dasharray="6 5"/>
+        <circle cx="320" cy="${160-d.comp*1.4}" r="5" fill="#34e0a1" stroke="#06060f" stroke-width="2"/><circle cx="620" cy="28" r="5" fill="#5b6ef5" stroke="#06060f" stroke-width="2"/></svg>
+        <div class="tooltip" style="left:40%;top:6%">now <b>${d.comp}%</b></div><div class="tooltip" style="right:3%;top:0">projected <b>99%</b></div></div>
+      <div class="axis"><span>history</span><span style="color:#9aa6ff">today</span><span>projection →</span></div></div>
+    <div class="r2">
+      <div class="card"><div class="jhead"><div class="jt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 6l-10 7L2 6"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg>DMARC track</div><span class="jbadge">${dSteps[dStage].toUpperCase()}</span></div><div class="steps">${stepHtml(dSteps,dStage)}</div><div class="nextaction"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><div class="t">${dStage>=3?'<b>Fully enforced.</b> Next milestone is BIMI — publish a verified logo to appear in inboxes.':dStage===0?'<b>No record.</b> Publish p=none to begin monitoring.':'<b>Next:</b> align remaining senders, then advance to '+dSteps[dStage+1]+'.'}</div></div></div>
+      <div class="card"><div class="jhead"><div class="jt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>MTA-STS track</div><span class="jbadge" style="${mStage>=2?'background:rgba(52,224,161,.16);color:var(--good)':''}">${mSteps[mStage].toUpperCase()}</span></div><div class="steps">${stepHtml(mSteps,mStage)}</div><div class="nextaction" style="${mStage>=2?'background:rgba(52,224,161,.08);border-color:rgba(52,224,161,.3)':''}"><svg viewBox="0 0 24 24" fill="none" stroke="${mStage>=2?'var(--good)':'#9aa6ff'}" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg><div class="t">${mStage>=2?'<b>Enforced.</b> All mail to you requires TLS. Maintain MX cert validity.':mStage===0?'<b>No policy.</b> Publish in testing mode and add TLS-RPT.':'<b>Ready:</b> testing is clean — flip to enforce when MX certs are healthy.'}</div></div></div>
+    </div>
+    ${(dStage===1||dStage===2||mStage===1)?`<div class="card" style="margin-top:16px"><div class="ct"><h3>Apply the next change</h3><span class="sectag">review &amp; publish · human-approved</span></div><div style="display:flex;gap:10px;flex-wrap:wrap">${(dStage===1||dStage===2)?`<span class="btn" onclick="openRecordReview('${key}','dmarc')">Review DMARC → ${dSteps[dStage+1]}</span>`:''}${mStage===1?`<span class="btn" onclick="openRecordReview('${key}','mta')">Review MTA-STS → Enforce</span>`:''}</div><div style="font-size:11.5px;color:var(--muted);margin-top:11px">Sentinel drafts the record; you review the diff and publish manually — nothing changes automatically.</div></div>`:''}
+    <div class="card" style="margin-top:16px"><div class="ct"><h3>DNS timeline — ${key}</h3><span class="sectag">this domain</span></div><div class="tl" id="roadTl"></div></div>`;
+  document.getElementById('roadTl').innerHTML=timelineEntries(key,'all').map(tlRow).join('')||`<div class="empty" style="padding:20px">No recorded changes yet.</div>`;
+}
+
+/* CERTS */
+let CSTATE='northwind.com';
+const CERTS={'northwind.com':[['mx1.northwind.com','Let\'s Encrypt · SMTP TLS',21,23,'var(--warn)','warnp','RENEW SOON'],['mx2.northwind.com','Let\'s Encrypt · SMTP TLS',64,70,'var(--good)','ok','HEALTHY'],['mta-sts.northwind.com','DigiCert · policy host',88,88,'var(--good)','ok','HEALTHY']],
+ 'acme.io':[['mx1.acme.io','Let\'s Encrypt',45,50,'var(--good)','ok','HEALTHY'],['mta-sts.acme.io','DigiCert',110,100,'var(--good)','ok','HEALTHY']],
+ 'globex.com':[['mx1.globex.com','DigiCert',9,10,'var(--bad)','danger','CRITICAL'],['mx2.globex.com','DigiCert',72,78,'var(--good)','ok','HEALTHY']],
+ 'initech.net':[['mx1.initech.net','Let\'s Encrypt',55,60,'var(--good)','ok','HEALTHY']],
+ 'umbrella.co':[['mx1.umbrella.co','Let\'s Encrypt',30,33,'var(--warn)','warnp','RENEW SOON']],
+ 'hooli.com':[]};
+function renderCerts(key){CSTATE=key;domainFilters('certFilters',key,'renderCerts',false);
+  document.getElementById('certTitle').textContent='Certificate watch — '+key;
+  const rows=CERTS[key]||[];const body=document.getElementById('certBody');
+  if(!rows.length){body.innerHTML=`<div class="card"><div class="empty"><div>No mail-path certificates discovered for ${key} (no MX / policy host configured).</div></div></div>`;return;}
+  body.innerHTML=`<div class="card"><div class="certrow" style="padding-bottom:10px"><div style="font-family:var(--mono);font-size:9px;letter-spacing:1px;color:var(--faint);text-transform:uppercase">Host</div><div style="font-family:var(--mono);font-size:9px;letter-spacing:1px;color:var(--faint);text-transform:uppercase">Days</div><div style="font-family:var(--mono);font-size:9px;letter-spacing:1px;color:var(--faint);text-transform:uppercase">Validity</div><div style="font-family:var(--mono);font-size:9px;letter-spacing:1px;color:var(--faint);text-transform:uppercase;text-align:right">Status</div></div>
+    ${rows.map(r=>`<div class="certrow"><div class="cn">${r[0]}<small>${r[1]}</small></div><div style="font-family:var(--mono);font-weight:700;color:${r[4]}">${r[2]}d</div><div class="expbar"><i style="width:${r[3]}%;background:${r[4]}"></i></div><div style="text-align:right"><span class="pill ${r[5]}">${r[6]}</span></div></div>`).join('')}</div>
+    <div class="card" style="margin-top:16px"><div class="ct"><h3>Why this matters</h3></div><div style="font-size:13px;color:#cdd3ec;line-height:1.7">If a mail-path cert expires while MTA-STS is in <b>enforce</b>, conforming senders <em>refuse to deliver</em> rather than fall back to plaintext — an outage. Sentinel warns here well before that.</div></div>`;
+}
+
+/* TIMELINE (tenant-wide) */
+const TL={
+ 'northwind.com':[['Jun 01','DMARC','up','DMARC pct raised 50 → 100','still p=none · wider monitoring'],['May 24','MTA-STS','neu','MTA-STS none → testing','policy + _mta-sts TXT published'],['May 20','TLS-RPT','up','TLS-RPT record added','_smtp._tls reporting on'],['May 12','DKIM','up','DKIM selector added','s1._domainkey · SendGrid'],['Apr 28','DMARC','up','DMARC record created','p=none · journey begins']],
+ 'acme.io':[['May 30','MTA-STS','up','MTA-STS testing → enforce','full TLS enforcement live'],['May 02','DMARC','up','DMARC p=quarantine → p=reject','spoofing now blocked']],
+ 'globex.com':[['May 28','MTA-STS','up','MTA-STS testing → enforce','enforcement live'],['Apr 30','DMARC','up','DMARC → p=reject','']],
+ 'initech.net':[['May 26','DMARC','neu','DMARC p=none → p=quarantine','pct=50 ramp started'],['May 14','MTA-STS','neu','MTA-STS none → testing','']],
+ 'umbrella.co':[['May 10','DMARC','up','DMARC record created','p=none']],
+ 'hooli.com':[]};
+function timelineEntries(dom,date){let out=[];const keys=dom==='all'?ORDER:[dom];keys.forEach(k=>(TL[k]||[]).forEach(e=>{
+  const mon=e[0].split(' ')[0].toLowerCase();const mm={jun:'jun',may:'may',apr:'apr'}[date];
+  if(date!=='all'&&!(mon===({jun:'jun',may:'may',apr:'apr'}[date])))return;
+  out.push({dom:k,e});}));
+  const ord={'Jun':3,'May':2,'Apr':1};out.sort((a,b)=>{const am=a.e[0].split(' ');const bm=b.e[0].split(' ');return (ord[bm[0]]*100+ +bm[1])-(ord[am[0]]*100+ +am[1]);});return out;}
+function tlRow(x){const e=x.e;const col={DMARC:['#34e0a1','rgba(52,224,161,.14)'],'MTA-STS':['#9aa6ff','rgba(91,110,245,.14)'],'TLS-RPT':['#2ee6c5','rgba(46,230,197,.14)'],DKIM:['#2ee6c5','rgba(46,230,197,.14)'],SPF:['#f5c542','rgba(245,197,66,.14)']}[e[1]];
+  return `<div class="l"><span class="when">${e[0]}</span><span class="ic2" style="background:${col[1]}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="${col[0]}" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg></span><div class="ttx"><b>${e[3]}</b><small>${e[4]||''}</small></div><span class="dchip">${x.dom}</span><span class="chg ${e[2]==='up'?'up':'neu'}">${e[1]}</span></div>`;}
+function renderTimeline(){const dom=document.getElementById('tlDom').value;const date=document.getElementById('tlDate').value;
+  const rows=timelineEntries(dom,date);document.getElementById('timelineBody').innerHTML=rows.length?rows.map(tlRow).join(''):`<div class="empty" style="padding:30px">No DNS changes for this filter.</div>`;}
+
+/* ===== AI INTEGRATION LAYER ===== */
+let CURKEY='northwind.com';
+const CK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>';
+const PL='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 5v14M5 12h14"/></svg>';
+function clsMeta(key,s){
+  const c=s.cls[0];const tor=/9009|tor/i.test(s.i);const mc=/mailchimp/i.test(s.n);
+  return {conf:c==='auth'?98:c==='fwd'?94:c==='susp'?87:71,
+    prov:(c==='susp'||c==='unauth')?'ai':'rule',
+    reason:c==='auth'?'Recognized sending infrastructure with both SPF and DKIM aligned to your domain.':c==='fwd'?'Forwarded mail — SPF breaks on the forwarding hop, but the original DKIM signature survives, so DMARC still passes.':c==='susp'?('No SPF, no DKIM'+(tor?', sending from a Tor-exit ASN':'')+', and a forged header-from — the signature of spoofing.'):mc?'Recognized ESP (Mailchimp), but it signs with its own domain (d=mcsv.net), so the DKIM signature is not aligned to you — and SPF isn\'t aligned either.':'Unauthenticated or unaligned sender on a generic ASN; legitimacy is unclear from the reports alone.',
+    evidence:[`Volume: ${fmt(s.vol)} messages`,`SPF result: ${s.spf}`,`DKIM result: ${s.dkim}`,`DMARC: ${s.dmr}`,`Identity: ${s.i}`],
+    action:c==='auth'?'Authorized — no action needed.':c==='fwd'?'Expected behaviour for forwarders; no action.':c==='susp'?'No action — tightening the policy to reject will block this automatically.':mc?'Enable Mailchimp branded DKIM: publish the CNAME records they provide so signatures use d='+key+'.':'Confirm whether this sender is yours. If so, authenticate it; otherwise it will be blocked once you reach reject.',
+    sources:mc?['Mailchimp — “Set up email domain authentication” guide']:(c==='susp'?[]:(c==='auth'?['Provider SPF/DKIM documentation']:[]))};
+}
+function clsChip(key,i,s){const m=clsMeta(key,s);const dashed=m.conf<80?' dashed':'';const dot=m.prov==='ai'?'<span class="prov ai">✦</span>':'<span class="prov rule"></span>';return `<span class="cls ${s.cls[0]}${dashed}" onclick="event.stopPropagation();openClsDrawer('${key}',${i})">${dot}${s.cls[1]}</span>`;}
+function openClsDrawer(key,i){const s=DOMAINS[key].dm.sources[i];const m=clsMeta(key,s);const col={auth:'var(--good)',fwd:'#9aa6ff',unauth:'var(--amber)',susp:'var(--bad)'}[s.cls[0]];
+  drawerHTML('Source classification',`
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px"><div class="srci" style="color:${s.c};width:38px;height:38px;font-size:15px">${s.ic}</div><div><div style="font-family:var(--disp);font-weight:700;font-size:16px">${s.n}</div><div style="font-family:var(--mono);font-size:11px;color:var(--faint)">${s.i}</div></div></div>
+    <div style="display:flex;align-items:center;gap:10px;margin:16px 0;flex-wrap:wrap"><span class="cls ${s.cls[0]}" style="cursor:default">${s.cls[1]}</span><span style="font-family:var(--mono);font-size:12px;color:${col}">${m.conf}% confidence</span><span style="font-family:var(--mono);font-size:10px;color:var(--faint)">· ${m.prov==='ai'?'✦ inferred by advisor':'● rule-matched'}</span></div>
+    <div class="drlbl">Reasoning</div><div class="drtxt">${m.reason}</div>
+    <div class="drlbl">Evidence used</div><div class="evid">${m.evidence.map(e=>'• '+e).join('<br>')}</div>
+    <div class="drlbl">Recommended action</div><div class="drtxt">${m.action}</div>
+    ${m.sources.length?`<div class="drlbl">Sources</div><div class="drtxt" style="color:var(--teal)">${m.sources.map(x=>'↗ '+x).join('<br>')}</div>`:''}
+    <div class="drfoot"><span>✦ AI-assisted · generated 4m ago</span><span class="re" onclick="toast('Re-classifying from latest reports…')">↻ Regenerate</span></div>
+    <div class="drlbl" style="margin-top:18px">Looks wrong? Teach Sentinel</div><div style="display:flex;gap:8px;flex-wrap:wrap"><span class="btn ghost sm" onclick="toast('Marked Authorized — overrides the AI for this sender going forward');closeOverlay()">Authorize sender</span><span class="btn ghost sm" onclick="toast('Marked Unauthorized — saved as ground truth');closeOverlay()">Mark unauthorized</span></div>
+  `);
+}
+function openRecordReview(key,track){const d=DOMAINS[key];let title,host,cur,prop,why,gate,ready,rfc;
+  if(track==='dmarc'){const st=d.road.dmarc;rfc='RFC 7489';host='_dmarc.'+key+' · TXT';
+    if(st<=1){title='DMARC → Quarantine · '+key;cur='v=DMARC1; p=none; pct=100; rua=mailto:reports@sentinel.io';prop='v=DMARC1; p=quarantine; pct=25; rua=mailto:reports@sentinel.io';why='Quarantine at 25% sends 1 in 4 unauthenticated messages to spam while you watch the impact. Your aligned senders are unaffected. Ramp 25 → 50 → 100 over ~2 weeks, then move to reject.';gate=[['ok','Primary senders (Google, SendGrid, Salesforce) aligned'],['no','Mailchimp not yet aligned — its mail would be quarantined'],['no','Acme Survey Tool unauthenticated']];ready=false;}
+    else{title='DMARC → Reject · '+key;cur='v=DMARC1; p=quarantine; pct=100; rua=...';prop='v=DMARC1; p=reject; pct=100; rua=...';why='Reject blocks unauthenticated mail outright. Your reports show only spoofing still fails, so legitimate mail is safe.';gate=[['ok','All legitimate senders aligned'],['ok','30 days at quarantine, no false positives']];ready=true;}
+  } else {rfc='RFC 8461';host='mta-sts.'+key+' · policy file';title='MTA-STS → Enforce · '+key;cur='mode: testing';prop='mode: enforce';why='Enforce makes conforming senders refuse to deliver over plaintext rather than fall back. 14 days of testing showed zero TLS failures and your MX certificates are valid, so no legitimate mail is at risk.';gate=[['ok','All MX support STARTTLS'],['ok','Certificates valid & hostname-matched'],['no','Renew mx1 cert (21d) first — recommended']];ready=false;}
+  const allOk=gate.every(g=>g[0]==='ok');
+  modalHTML(title,`
+    <div class="drlbl">What changes</div>
+    <div class="diff"><div class="dl rem">− ${cur}</div><div class="dl add">+ ${prop}</div></div>
+    <div style="font-family:var(--mono);font-size:10.5px;color:var(--faint);margin-top:9px">${host}</div>
+    <div class="advisor" style="margin:14px 0"><div class="orb"></div><div><div class="who">Sentinel · why this change</div><div class="msg">${why}</div></div></div>
+    <div class="drlbl">Prerequisites</div><div class="gate" style="margin-top:6px">${gate.map(g=>`<div class="gi"><span class="gc ${g[0]}">${g[0]==='ok'?CK:PL}</span>${g[1]}</div>`).join('')}</div>
+    ${allOk?'':'<div style="font-size:11.5px;color:var(--amber);margin-top:11px">⚠ Gate not fully met — publishing now risks impacting legitimate mail. Recommended: resolve the items above first.</div>'}
+    <div class="drfoot" style="border:0;margin-top:6px"><span>Record drafted by Sentinel · validated against ${rfc} · you publish manually.</span></div>
+    <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">
+      <span class="btn" onclick="${allOk?`toast('Marked as published — logged to the DNS timeline');closeOverlay()`:`toast('⚠ Publishing despite the gate — confirm in your DNS provider')`}">${allOk?'Mark as published':'Publish anyway'}</span>
+      <span class="btn ghost" onclick="toast('Record copied to clipboard')">Copy record</span>
+      <span class="btn ghost" onclick="toast('Edit mode (prototype)')">Edit</span>
+      <span class="btn ghost" onclick="closeOverlay()">Cancel</span>
+    </div>
+  `);
+}
+function drawerHTML(t,b){document.getElementById('drTitle').textContent=t;document.getElementById('drBody').innerHTML=b;document.getElementById('backdrop').classList.add('show');document.getElementById('drawer').classList.add('show');}
+function modalHTML(t,b){document.getElementById('mdTitle').textContent=t;document.getElementById('mdBody').innerHTML=b;document.getElementById('backdrop').classList.add('show');document.getElementById('modal').classList.add('show');}
+function closeOverlay(){['backdrop','drawer','modal'].forEach(id=>document.getElementById(id).classList.remove('show'));}
+function reanalyzeSources(){document.querySelectorAll('#dmarcBody .cls').forEach(c=>{c.classList.add('skel');c.textContent='Classifying…';});setTimeout(()=>{renderDmarc(DSTATE);toast('Re-analyzed · classifications cached');},1300);}
+let toastT;function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2600);}
+/* alerts */
+const ALERTS=[
+  ['var(--bad)','New unauthorized sender on hooli.com',`A source at 77.91.x began sending 2,140 messages as hooli.com with no SPF or DKIM. Because hooli.com has no DMARC record, nothing is stopping it. Recommend publishing p=none today to start monitoring.`,'12m ago'],
+  ['var(--warn)','mx1.northwind.com certificate expires in 21 days',`Renew before moving MTA-STS to enforce — otherwise conforming senders will refuse delivery once the cert lapses.`,'1h ago'],
+  ['var(--good)','globex.com reached p=reject',`Enforcement is live and the spoofing from 45.13.x is now being rejected. Nothing to do — nicely done.`,'3h ago']];
+function toggleAlerts(e){if(e)e.stopPropagation();const m=document.getElementById('alertmenu');const show=!m.classList.contains('show');document.getElementById('amBody').innerHTML=ALERTS.map(a=>`<div class="alert"><span class="ad" style="background:${a[0]}"></span><div><div class="at">${a[1]}</div><div class="ab">${a[2]}</div><div class="aw">✦ AI-narrated · ${a[3]}</div></div></div>`).join('');m.classList.toggle('show',show);}
+/* assistant */
+let ASOPEN=false;
+function toggleAssistant(){ASOPEN=!ASOPEN;document.getElementById('assistant').classList.toggle('show',ASOPEN);document.getElementById('fab').style.display=ASOPEN?'none':'grid';const b=document.getElementById('asBody');if(ASOPEN&&!b.dataset.init){b.dataset.init='1';b.innerHTML=`<div class="bubble a"><div class="who">Sentinel · grounded</div>Hi Asaph — I'm looking at <b>northwind.com</b>: p=none, 92.4% passing, two senders blocking quarantine. Ask me anything about these reports.</div>`;document.getElementById('asChips').innerHTML=['Why is Mailchimp failing?','Am I safe to move to quarantine?','Explain my MTA-STS status'].map(c=>`<span class="chip" onclick="askChip(this)">${c}</span>`).join('');}}
+function askChip(el){document.getElementById('asInput').value=el.textContent;sendAssistant();}
+function answerFor(q){q=q.toLowerCase();
+  if(q.includes('mailchimp'))return{t:"Mailchimp signs your campaigns with DKIM, but using its own domain (d=mcsv.net), so the signature isn't aligned to northwind.com — and its SPF isn't aligned either. That's why those 18,540 legitimate messages fail DMARC. The fix is to enable Mailchimp's branded DKIM by publishing the CNAMEs they give you, so signatures use d=northwind.com.",s:'Mailchimp — email domain authentication'};
+  if(q.includes('quarantine')||q.includes('safe'))return{t:"Not quite yet. 92.4% already passes, but two legitimate sources still fail: Mailchimp (DKIM unaligned) and the Acme Survey Tool (unauthenticated). Move to quarantine now and their real mail lands in spam. Align those two first, then quarantine at pct=25 and ramp up.",s:'RFC 7489 §6.3'};
+  if(q.includes('mta')||q.includes('tls')||q.includes('enforce'))return{t:"MTA-STS is in testing and healthy: 14 days, zero TLS failures, both MX hosts presenting valid certs over STARTTLS. You're eligible for enforce — just renew the mx1 cert (21 days left) first so enforcement never trips on an expired certificate.",s:'RFC 8461'};
+  return{t:"From northwind.com's latest reports: p=none, 92.4% DMARC compliance, MTA-STS testing. The fastest win is aligning Mailchimp and the Acme Survey Tool, which unlocks quarantine. Want me to walk through either?",s:'northwind.com reports · 30d'};}
+function sendAssistant(){const inp=document.getElementById('asInput');const q=inp.value.trim();if(!q)return;const b=document.getElementById('asBody');b.insertAdjacentHTML('beforeend',`<div class="bubble u">${q}</div>`);inp.value='';const a=answerFor(q);const id='a'+Date.now();b.insertAdjacentHTML('beforeend',`<div class="bubble a" id="${id}"><div class="who">Sentinel · grounded</div><span class="body"></span></div>`);b.scrollTop=b.scrollHeight;let i=0;const el=document.querySelector('#'+id+' .body');const tick=setInterval(()=>{i+=3;el.innerHTML=a.t.slice(0,i)+(i<a.t.length?'<span class="cur"></span>':`<div class="srcline">↗ ${a.s}</div>`);b.scrollTop=b.scrollHeight;if(i>=a.t.length)clearInterval(tick);},16);}
+document.addEventListener('click',e=>{if(!e.target.closest('#alertmenu')&&!e.target.closest('.iconbtn'))document.getElementById('alertmenu').classList.remove('show');});
+
+/* NAV */
+function go(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');
+  const map={posture:'posture',dmarc:'dmarc',mtasts:'mtasts',journey:'journey',certs:'certs',timeline:'timeline',overview:'overview',profile:null};
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active', n.dataset.s===id));
+  window.scrollTo({top:0,behavior:'smooth'});}
+document.querySelectorAll('.nav-item').forEach(n=>n.addEventListener('click',()=>go(n.dataset.s)));
+document.addEventListener('click',e=>{const h=e.target.closest('.exp-head');if(h){e.stopPropagation();h.parentElement.classList.toggle('open');}});
+
+/* INIT */
+function fillSelect(id,includeAll){const s=document.getElementById(id);let h=includeAll?'<option value="all">All domains</option>':'';ORDER.forEach(k=>h+=`<option value="${k}">${k}</option>`);s.innerHTML=h;}
+fillSelect('roadSel',true);fillSelect('tlDom',true);
+renderOverview();renderPosture('all');renderDmarc('northwind.com');renderMta('northwind.com');renderRoadmap('all');renderCerts('northwind.com');renderTimeline();
+</script>
+</body>
+</html>
