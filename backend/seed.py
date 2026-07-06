@@ -18,14 +18,14 @@ async def seed():
 
         user = User(
             tenant_id=tenant.id,
-            email="admin@sentinel.local",
+            email="admin@mailsentry.co.za",
             hashed_password=pwd.hash("sentinel123"),
             role="admin",
         )
         db.add(user)
         await db.commit()
         print("OK tenant:", tenant.name)
-        print("OK user:   admin@sentinel.local")
+        print("OK user:   admin@mailsentry.co.za")
         print("OK pass:   sentinel123")
 
 asyncio.run(seed())

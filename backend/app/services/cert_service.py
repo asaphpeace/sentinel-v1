@@ -170,7 +170,7 @@ def _smtp_starttls_probe(host: str, port: int, ctx: ssl.SSLContext) -> dict:
     """Synchronous SMTP STARTTLS probe (run in executor)."""
     with socket.create_connection((host, port), timeout=10) as sock:
         sock.recv(1024)  # banner
-        sock.sendall(f"EHLO sentinel.check\r\n".encode())
+        sock.sendall(b"EHLO mailsentry.co.za\r\n")
         ehlo_resp = sock.recv(4096).decode(errors="replace")
         if "STARTTLS" not in ehlo_resp:
             return {"error": "STARTTLS not supported", "starttls_supported": False}

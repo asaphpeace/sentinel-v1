@@ -1,5 +1,5 @@
 """
-Ingest synthetic DMARC and TLS-RPT reports for sentinel.local.
+Ingest synthetic DMARC and TLS-RPT reports for mailsentry.co.za.
 
 Creates the domain if it doesn't exist, then parses the two report
 files exactly as the IMAP service would, then rebuilds aggregates.
@@ -23,8 +23,8 @@ from app.services.dmarc_service import rebuild_aggregates
 from app.services.tls_service import rebuild_tls_aggregates
 
 REPORTS_DIR = Path(__file__).parent / "reports"
-DMARC_FILE  = REPORTS_DIR / "dmarc_sentinel.local.xml"
-TLS_FILE    = REPORTS_DIR / "tls_sentinel.local.json"
+DMARC_FILE  = REPORTS_DIR / "dmarc_mailsentry.co.za.xml"
+TLS_FILE    = REPORTS_DIR / "tls_mailsentry.co.za.json"
 
 
 async def main():
@@ -35,18 +35,18 @@ async def main():
     async with AsyncSessionLocal() as db:
 
         # ── Find admin tenant ─────────────────────────────────────────────
-        result = await db.execute(select(User).where(User.email == "admin@sentinel.local"))
+        result = await db.execute(select(User).where(User.email == "admin@mailsentry.co.za"))
         admin = result.scalar_one_or_none()
         if not admin:
-            print("ERROR: admin@sentinel.local not found — run seed.py first.")
+            print("ERROR: admin@mailsentry.co.za not found — run seed.py first.")
             return
         tenant_id = admin.tenant_id
         print(f"Tenant: {tenant_id}")
 
-        # ── Ensure sentinel.local domain exists ───────────────────────────
+        # ── Ensure mailsentry.co.za domain exists ───────────────────────────
         result = await db.execute(
             select(Domain).where(
-                Domain.name == "sentinel.local",
+                Domain.name == "mailsentry.co.za",
                 Domain.tenant_id == tenant_id,
             )
         )
@@ -56,10 +56,10 @@ async def main():
             domain = Domain(
                 id=uuid.uuid4(),
                 tenant_id=tenant_id,
-                name="sentinel.local",
+                name="mailsentry.co.za",
                 reporting_slug=generate_slug(),
                 dmarc_stage="quarantine",
-                dmarc_policy="v=DMARC1; p=quarantine; pct=100; rua=mailto:reports@sentinel.local",
+                dmarc_policy="v=DMARC1; p=quarantine; pct=100; rua=mailto:reports@mailsentry.co.za",
                 dmarc_pct=100,
                 mta_sts_stage="testing",
                 dmarc_record_published=True,
@@ -69,9 +69,9 @@ async def main():
             )
             db.add(domain)
             await db.flush()
-            print("Created domain: sentinel.local")
+            print("Created domain: mailsentry.co.za")
         else:
-            print("Domain already exists: sentinel.local")
+            print("Domain already exists: mailsentry.co.za")
 
         # ── Ingest DMARC XML ──────────────────────────────────────────────
         dmarc_xml = DMARC_FILE.read_text(encoding="utf-8")
@@ -94,7 +94,7 @@ async def main():
         await db.commit()
 
     print()
-    print("OK  sentinel.local seeded from synthetic reports")
+    print("OK  mailsentry.co.za seeded from synthetic reports")
     print("OK  DMARC: 12,896 messages across 6 sources (Google, M365, Mailchimp, survey tool, spoof)")
     print("OK  TLS:   22,315 sessions · 19 failures (cert-expired, cert-not-trusted, starttls)")
 

@@ -94,10 +94,10 @@ async def seed():
 
     async with AsyncSessionLocal() as db:
         # Find the tenant from the seeded admin user
-        result = await db.execute(select(User).where(User.email == "admin@sentinel.local"))
+        result = await db.execute(select(User).where(User.email == "admin@mailsentry.co.za"))
         admin = result.scalar_one_or_none()
         if not admin:
-            print("ERROR: Run seed.py first to create admin@sentinel.local")
+            print("ERROR: Run seed.py first to create admin@mailsentry.co.za")
             return
 
         tenant_id = admin.tenant_id
