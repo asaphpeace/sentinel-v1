@@ -943,6 +943,15 @@ async def generate_dns_risk_assessment(
                 exp = f"DMARC policy on {domain_name} was downgraded from p={prev_pol} to p={curr_pol}. Enforcement has been weakened."
                 act = "Investigate the reason for the downgrade. Restore p=" + prev_pol + " if not intentional."
             else:
+                # If the only material change was adding/updating the Sentinel reporting address,
+                # this is expected onboarding activity — classify as info and short-circuit to
+                # avoid the LLM recommending to remove our own reporting address.
+                sentinel_rua = f"@{settings.reporting_domain}"
+                if current_value and sentinel_rua in current_value:
+                    sev = "info"
+                    exp = f"DMARC record on {domain_name} was updated to include Sentinel reporting (p={curr_pol})."
+                    act = "No action needed — this is expected Sentinel onboarding."
+                    return {"severity": sev, "explanation": exp, "action": act, "is_ai": False}
                 sev = "info"
                 exp = f"DMARC record on {domain_name} was updated (p={curr_pol})."
                 act = "Confirm the new record reflects your intended authentication policy."
@@ -971,15 +980,16 @@ async def generate_dns_risk_assessment(
         "current_value": current_value,
     })
 
-    system = """You are Sentinel, an email security platform. Classify the security risk of a DNS record change.
+    system = f"""You are Sentinel, an email security platform. Classify the security risk of a DNS record change.
 
 Rules:
-- Output ONLY valid JSON: {"severity": "info|warn|critical", "explanation": "...", "action": "..."}
+- Output ONLY valid JSON: {{"severity": "info|warn|critical", "explanation": "...", "action": "..."}}
 - severity: info (expected/benign), warn (notable, investigate), critical (immediate threat)
 - explanation: 1-2 sentences. What happened and why it matters.
 - action: 1 sentence. The single most important thing to do right now.
 - Do not invent facts. Use only the provided values.
-- Audience: IT administrator."""
+- Audience: IT administrator.
+- IMPORTANT: Any DMARC rua= or ruf= address at @{settings.reporting_domain} is Sentinel's own reporting infrastructure. Changes that add or update this address are expected onboarding activity — classify as info and do NOT recommend removing it."""
 
     try:
         async with httpx.AsyncClient(timeout=10) as client:
