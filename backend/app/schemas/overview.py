@@ -21,6 +21,7 @@ class DomainKpiOut(BaseModel):
     posture_score: float
     dmarc_stage: str
     mta_sts_stage: str
+    mta_sts_hosting_mode: str
     dmarc_comp: float | None
     tls_pass_pct: float | None
     tls_sessions: int

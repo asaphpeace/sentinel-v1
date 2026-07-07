@@ -39,6 +39,14 @@ async def _txt_lookup(name: str) -> str | None:
         return None
 
 
+async def _cname_lookup(name: str) -> str | None:
+    try:
+        answers = await _resolver.resolve(name, "CNAME")
+        return str(answers[0].target).rstrip(".")
+    except dns.exception.DNSException:
+        return None
+
+
 async def _mx_lookup(domain_name: str) -> str | None:
     try:
         answers = await _resolver.resolve(domain_name, "MX")
@@ -145,11 +153,12 @@ async def poll_domain_dns(db: AsyncSession, domain: Domain) -> list[dict]:
     name = domain.name
 
     checks: list[tuple[str, str, Any]] = [
-        ("DMARC",   f"_dmarc.{name}",           _txt_lookup(f"_dmarc.{name}")),
-        ("SPF",     name,                        _txt_lookup(name)),
-        ("MX",      name,                        _mx_lookup(name)),
-        ("MTA-STS", f"_mta-sts.{name}",          _txt_lookup(f"_mta-sts.{name}")),
-        ("TLS-RPT", f"_smtp._tls.{name}",        _txt_lookup(f"_smtp._tls.{name}")),
+        ("DMARC",   f"_dmarc.{name}",            _txt_lookup(f"_dmarc.{name}")),
+        ("SPF",     name,                         _txt_lookup(name)),
+        ("MX",      name,                         _mx_lookup(name)),
+        ("MTA-STS", f"_mta-sts.{name}",           _txt_lookup(f"_mta-sts.{name}")),
+        ("TLS-RPT", f"_smtp._tls.{name}",         _txt_lookup(f"_smtp._tls.{name}")),
+        ("CNAME",   f"mta-sts.{name}",            _cname_lookup(f"mta-sts.{name}")),
     ]
 
     for record_type, host, coro in checks:

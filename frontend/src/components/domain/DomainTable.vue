@@ -187,6 +187,9 @@ const failPct = (d: any) => d.dmarc_comp != null ? Math.max(0, 100 - d.dmarc_com
         <div class="axis-meta" v-else-if="d.mta_sts_stage === 'none'" style="color:var(--faint)">
           No policy published
         </div>
+        <div v-if="d.mta_sts_stage !== 'none'" class="hosting-badge" :class="d.mta_sts_hosting_mode === 'managed' ? 'managed' : 'self'">
+          {{ d.mta_sts_hosting_mode === 'managed' ? 'Sentinel-hosted' : 'Self-hosted' }}
+        </div>
       </div>
 
       <!-- Volume + pass/fail bar -->
@@ -317,4 +320,17 @@ const failPct = (d: any) => d.dmarc_comp != null ? Math.max(0, 100 - d.dmarc_com
 
 /* ── Empty ───────────────────────────────────────────────────────────────── */
 .empty { padding: 32px; text-align: center; color: var(--muted); font-size: 13px; }
+
+/* ── Hosting badge ───────────────────────────────────────────────────────── */
+.hosting-badge {
+  display: inline-flex; align-items: center; margin-top: 4px;
+  font-family: var(--mono); font-size: 9px; text-transform: uppercase;
+  letter-spacing: .5px; padding: 2px 7px; border-radius: 20px;
+}
+.hosting-badge.managed {
+  background: rgba(46,230,197,.12); border: 1px solid rgba(46,230,197,.25); color: var(--teal);
+}
+.hosting-badge.self {
+  background: rgba(255,255,255,.05); border: 1px solid var(--line2); color: var(--faint);
+}
 </style>

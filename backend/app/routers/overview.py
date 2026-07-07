@@ -154,6 +154,7 @@ async def get_tenant_overview(
             posture_score=posture["score"],
             dmarc_stage=d.dmarc_stage,
             mta_sts_stage=d.mta_sts_stage,
+            mta_sts_hosting_mode=d.mta_sts_hosting_mode,
             dmarc_comp=comp,
             tls_pass_pct=tls_pct,
             tls_sessions=tls_total,

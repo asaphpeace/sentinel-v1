@@ -18,7 +18,7 @@ const advisor        = ref<any>(null)
 const advisorLoading = ref(false)
 
 const PAGE_SIZE = 50
-const RECORD_TYPES = ['all', 'DMARC', 'SPF', 'MX', 'MTA-STS', 'TLS-RPT', 'DKIM']
+const RECORD_TYPES = ['all', 'DMARC', 'SPF', 'MX', 'MTA-STS', 'TLS-RPT', 'DKIM', 'CNAME']
 
 async function loadAdvisor(domainId?: string, cachedOnly = false, force = false) {
   if (!cachedOnly) {

@@ -50,6 +50,7 @@ def _domain_out(d: Domain, parent_domain: str | None = None) -> DomainOut:
         mta_sts_published=d.mta_sts_published,
         ownership_verified=d.ownership_verified,
         reporting_address=reporting_address(d.reporting_slug),
+        mta_sts_hosting_mode=d.mta_sts_hosting_mode,
         added_at=d.added_at,
         parent_domain=parent_domain,
     )

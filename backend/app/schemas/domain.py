@@ -39,6 +39,7 @@ class DomainOut(BaseModel):
     mta_sts_published: bool
     ownership_verified: bool
     reporting_address: str
+    mta_sts_hosting_mode: str
     added_at: datetime
     # Derived, not stored — the most specific other monitored domain this one
     # is a subdomain of, if any. Lets the Domains page relate a discovered
