@@ -1,3 +1,23 @@
+{
+    on_demand_tls {
+        ask http://localhost:8000/mta-sts/allowed
+    }
+}
+
 app.mailsentry.co.za {
     reverse_proxy localhost:8080
+}
+
+mta-sts-host.mailsentry.co.za {
+    reverse_proxy localhost:8000
+}
+
+# Catch-all for on-demand TLS — handles mta-sts.<customer-domain> requests.
+# Caddy calls the ask endpoint above before issuing each new cert; only
+# hostnames approved by the backend get a cert.
+https:// {
+    tls {
+        on_demand
+    }
+    reverse_proxy localhost:8000
 }

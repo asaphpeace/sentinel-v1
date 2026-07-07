@@ -165,6 +165,31 @@ async def _get_domain(domain_id: str, tenant_id, db: AsyncSession) -> Domain:
     return domain
 
 
+@public_router.get("/mta-sts/allowed")
+async def mta_sts_cert_ask(host: str, db: AsyncSession = Depends(get_db)):
+    """
+    Caddy on-demand TLS ask endpoint — returns 200 if Caddy should issue a
+    cert for this hostname, 403 otherwise. Called before every new cert
+    issuance; prevents Caddy from issuing certs for arbitrary hostnames.
+    Only approves mta-sts.<domain> where that domain exists and is on
+    managed hosting.
+    """
+    host = host.lower().split(":")[0]
+    if not host.startswith("mta-sts."):
+        raise HTTPException(status_code=403, detail="Not a managed MTA-STS host")
+    domain_name = host[len("mta-sts."):]
+    result = await db.execute(
+        select(Domain).where(
+            Domain.name == domain_name,
+            Domain.is_active == True,
+            Domain.mta_sts_hosting_mode == "managed",
+        )
+    )
+    if not result.scalar_one_or_none():
+        raise HTTPException(status_code=403, detail="Domain not found or not on managed hosting")
+    return {"ok": True}
+
+
 @public_router.get("/.well-known/mta-sts.txt")
 async def serve_managed_policy(request: Request, db: AsyncSession = Depends(get_db)):
     """
