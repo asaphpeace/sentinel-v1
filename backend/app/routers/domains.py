@@ -120,6 +120,7 @@ async def get_domain(
         dmarc_record_published=d.dmarc_record_published, tlsrpt_record_published=d.tlsrpt_record_published,
         mta_sts_published=d.mta_sts_published, ownership_verified=d.ownership_verified,
         reporting_address=reporting_address(d.reporting_slug),
+        mta_sts_hosting_mode=d.mta_sts_hosting_mode,
         added_at=d.added_at, parent_domain=parent_domain, dmarc_policy=d.dmarc_policy, dmarc_pct=d.dmarc_pct,
         mta_sts_policy_id=d.mta_sts_policy_id, last_checked_at=d.last_checked_at,
     )
