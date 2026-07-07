@@ -917,6 +917,13 @@ async def generate_dns_risk_assessment(
             sev = "info"
             exp = f"A new DMARC record was published for {domain_name}. Email authentication reporting is now active."
             act = "Verify the record contains your correct reporting address and the intended policy."
+        elif record_type == "CNAME":
+            _platform_targets = (settings.reporting_domain, settings.mta_sts_hosting_cname_target)
+            if current_value and any(t in current_value for t in _platform_targets):
+                sev = "info"
+                exp = f"CNAME added for {domain_name} pointing to Sentinel infrastructure ({current_value.strip()})."
+                act = "No action needed — this is expected Sentinel managed-hosting configuration."
+                return {"severity": sev, "explanation": exp, "action": act, "is_ai": False}
         elif record_type == "SPF":
             if current_value and ("+all" in current_value or " all" in current_value.lower()):
                 sev = "critical"
@@ -955,6 +962,16 @@ async def generate_dns_risk_assessment(
                 sev = "info"
                 exp = f"DMARC record on {domain_name} was updated (p={curr_pol})."
                 act = "Confirm the new record reflects your intended authentication policy."
+        elif record_type == "CNAME":
+            _platform_targets = (settings.reporting_domain, settings.mta_sts_hosting_cname_target)
+            if current_value and any(t in current_value for t in _platform_targets):
+                sev = "info"
+                exp = f"CNAME on {domain_name} updated to point to Sentinel infrastructure ({current_value.strip()})."
+                act = "No action needed — this is expected Sentinel managed-hosting configuration."
+                return {"severity": sev, "explanation": exp, "action": act, "is_ai": False}
+            sev = "warn"
+            exp = f"CNAME on {domain_name} was changed to point to {current_value or 'an unknown target'}."
+            act = "Verify the new CNAME target is correct and under your control."
         elif record_type == "SPF":
             if current_value and ("+all" in current_value or " all" in current_value.lower()):
                 sev = "critical"
@@ -989,7 +1006,10 @@ Rules:
 - action: 1 sentence. The single most important thing to do right now.
 - Do not invent facts. Use only the provided values.
 - Audience: IT administrator.
-- IMPORTANT: Any DMARC rua= or ruf= address at @{settings.reporting_domain} is Sentinel's own reporting infrastructure. Changes that add or update this address are expected onboarding activity — classify as info and do NOT recommend removing it."""
+- IMPORTANT: {settings.reporting_domain} is Sentinel's own platform domain. Any of the following are expected onboarding activity — classify as info and do NOT flag them as suspicious:
+  * DMARC rua= or ruf= addresses at @{settings.reporting_domain}
+  * CNAME records pointing to {settings.mta_sts_hosting_cname_target} (Sentinel managed MTA-STS hosting)
+  * Any DNS record that references {settings.reporting_domain} as part of Sentinel onboarding"""
 
     try:
         async with httpx.AsyncClient(timeout=10) as client:
