@@ -10,6 +10,15 @@ const emit  = defineEmits<{ next: [results: any[]] }>()
 
 const router = useRouter()
 
+const copiedKey = ref<string | null>(null)
+async function copyText(text: string, key: string) {
+  try {
+    await navigator.clipboard.writeText(text)
+    copiedKey.value = key
+    setTimeout(() => { copiedKey.value = null }, 2000)
+  } catch {}
+}
+
 interface DomainResult {
   domain: string
   already_exists: boolean
@@ -88,20 +97,55 @@ function proceed() {
             <span class="dn">{{ r.domain }}</span>
             <StatusChip :variant="r.dmarc_exists ? 'pill' : 'am'" :value="r.dmarc_exists ? 'good' : 'none'" :label="r.dmarc_exists ? 'Record found' : 'No record'" />
           </div>
-          <div v-if="r.dmarc_exists" class="field-row">
-            <span class="fl">Existing record</span>
-            <span class="fv fm">{{ r.current_record }}</span>
-          </div>
+          <!-- Existing record -->
+          <template v-if="r.dmarc_exists">
+            <div class="record-label">
+              <svg viewBox="0 0 24 24" fill="none" stroke="var(--faint)" stroke-width="2" style="width:13px;height:13px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              Current record
+            </div>
+            <div class="record-box current">
+              <span class="record-text">{{ r.current_record }}</span>
+            </div>
+          </template>
           <template v-else>
             <div class="notice amber">
               <svg viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
-              No DMARC record — publish the generated record below to start monitoring.
+              No DMARC record found — publish the record below to start monitoring.
             </div>
-            <CodeBlock :code="r.generated_record" lang="dns" style="margin-top:10px" />
           </template>
-          <div class="field-row" style="margin-top:10px">
-            <span class="fl">Reporting address</span>
-            <span class="fv fm">{{ r.reporting_address }}</span>
+
+          <!-- Reporting address -->
+          <div class="record-label" style="margin-top:12px">
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--faint)" stroke-width="2" style="width:13px;height:13px"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+              Reporting address
+          </div>
+          <div class="record-box addr">
+            <span class="record-text teal">{{ r.reporting_address }}</span>
+            <button class="copy-btn" @click="copyText(r.reporting_address, r.domain + '-addr')">
+              <svg v-if="copiedKey !== r.domain + '-addr'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              <svg v-else viewBox="0 0 24 24" fill="none" stroke="var(--good)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              {{ copiedKey === r.domain + '-addr' ? 'Copied' : 'Copy' }}
+            </button>
+          </div>
+
+          <!-- Generated record to publish -->
+          <div class="record-label" style="margin-top:12px">
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--teal)" stroke-width="2" style="width:13px;height:13px"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+            {{ r.dmarc_exists ? 'Updated record to publish' : 'Record to publish' }}
+          </div>
+          <div class="record-box new">
+            <span class="record-text teal">{{ r.generated_record }}</span>
+            <button class="copy-btn" @click="copyText(r.generated_record, r.domain + '-rec')">
+              <svg v-if="copiedKey !== r.domain + '-rec'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              <svg v-else viewBox="0 0 24 24" fill="none" stroke="var(--good)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              {{ copiedKey === r.domain + '-rec' ? 'Copied' : 'Copy' }}
+            </button>
+          </div>
+          <div v-if="r.dmarc_exists" class="update-hint">
+            Replace your current TXT record at <code>_dmarc.{{ r.domain }}</code> with the record above to add Sentinel reporting.
+          </div>
+          <div v-else class="update-hint">
+            Add this TXT record at <code>_dmarc.{{ r.domain }}</code> in your DNS provider.
           </div>
         </div>
       </template>
@@ -191,10 +235,18 @@ function proceed() {
 .notice { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border-radius: 11px; font-size: 12.5px; color: var(--muted); }
 .notice.amber { background: rgba(255,190,0,.08); border: 1px solid rgba(255,190,0,.25); }
 .notice svg { width: 16px; height: 16px; flex: none; margin-top: 1px; }
-.field-row { display: flex; align-items: flex-start; gap: 12px; }
-.fl { font-family: var(--mono); font-size: 10px; color: var(--faint); text-transform: uppercase; letter-spacing: .6px; min-width: 130px; padding-top: 1px; }
-.fv { font-size: 12.5px; }
-.fm { font-family: var(--mono); color: var(--teal); word-break: break-all; }
+.record-label { display: flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: .7px; color: var(--faint); margin-bottom: 6px; }
+.record-box { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: rgba(255,255,255,.03); }
+.record-box.current { border-color: rgba(255,255,255,.1); background: rgba(255,255,255,.02); }
+.record-box.new { border-color: rgba(46,230,197,.2); background: rgba(46,230,197,.04); }
+.record-box.addr { border-color: rgba(91,110,245,.2); background: rgba(91,110,245,.04); }
+.record-text { font-family: var(--mono); font-size: 11.5px; color: var(--muted); word-break: break-all; line-height: 1.6; flex: 1; }
+.record-text.teal { color: var(--teal); }
+.copy-btn { display: flex; align-items: center; gap: 5px; background: rgba(255,255,255,.07); border: 1px solid var(--line); border-radius: 7px; padding: 5px 10px; font-family: var(--mono); font-size: 10px; color: var(--muted); cursor: pointer; white-space: nowrap; flex: none; transition: background .15s; }
+.copy-btn:hover { background: rgba(255,255,255,.12); }
+.copy-btn svg { width: 12px; height: 12px; flex: none; }
+.update-hint { font-size: 11.5px; color: var(--faint); margin-top: 7px; line-height: 1.6; }
+.update-hint code { font-family: var(--mono); color: var(--muted); background: rgba(255,255,255,.06); padding: 1px 5px; border-radius: 4px; }
 
 .all-done-box { display: flex; gap: 14px; padding: 18px; background: rgba(52,224,161,.07); border: 1px solid rgba(52,224,161,.25); border-radius: 14px; color: var(--muted); margin-top: 8px; }
 
