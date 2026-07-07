@@ -130,7 +130,7 @@ const existingCount = computed(() => queued.value.filter(d => existingSet.value.
 
     <div class="actions">
       <button class="btn" :disabled="!queued.length" @click="next">
-        Check DMARC <span v-if="queued.length > 1">({{ queued.length }})</span> →
+        Next <span v-if="queued.length > 1">({{ queued.length }} domains)</span> →
       </button>
     </div>
   </div>
