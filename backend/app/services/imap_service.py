@@ -72,7 +72,8 @@ async def poll_inbox() -> None:
     await imap.select("INBOX")
 
     _, data = await imap.search("UNSEEN")
-    uids = data[0].split()
+    raw_uids = data[0].split() if data[0] else []
+    uids = [u.decode() if isinstance(u, bytes) else u for u in raw_uids]
     log.info("IMAP: %d unseen messages", len(uids))
 
     for uid in uids:
