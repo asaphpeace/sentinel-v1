@@ -2,7 +2,8 @@ import logging
 import uuid
 from contextlib import asynccontextmanager
 
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
+import asyncio
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
@@ -23,31 +24,28 @@ from app.routers import auth, domains, dmarc, tls, overview, certs, dns, alerts,
 configure_logging()
 log = logging.getLogger(__name__)
 
-scheduler = AsyncIOScheduler()
+def _make_interval_task(fn, seconds: int):
+    async def _loop():
+        while True:
+            await asyncio.sleep(seconds)
+            await fn()
+    return _loop
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Register background jobs
-    scheduler.add_job(
-        _imap_poll_job, "interval", seconds=settings.imap_poll_interval, id="imap_poll"
-    )
-    scheduler.add_job(
-        _cert_probe_job, "interval", seconds=settings.cert_probe_interval, id="cert_probe"
-    )
-    scheduler.add_job(
-        _dns_poll_job, "interval", seconds=settings.dns_poll_interval, id="dns_poll"
-    )
-    scheduler.add_job(
-        _recommendation_job, "interval", seconds=settings.recommendation_interval, id="recommendation_eval"
-    )
-    scheduler.add_job(
-        _scheduled_report_job, "interval", seconds=settings.scheduled_report_check_interval, id="scheduled_reports"
-    )
-    scheduler.start()
+    tasks = [
+        asyncio.create_task(_make_interval_task(_imap_poll_job, settings.imap_poll_interval)()),
+        asyncio.create_task(_make_interval_task(_cert_probe_job, settings.cert_probe_interval)()),
+        asyncio.create_task(_make_interval_task(_dns_poll_job, settings.dns_poll_interval)()),
+        asyncio.create_task(_make_interval_task(_recommendation_job, settings.recommendation_interval)()),
+        asyncio.create_task(_make_interval_task(_scheduled_report_job, settings.scheduled_report_check_interval)()),
+    ]
     log.info("Sentinel background scheduler started")
     yield
-    scheduler.shutdown()
+    for t in tasks:
+        t.cancel()
+    await asyncio.gather(*tasks, return_exceptions=True)
 
 
 async def _imap_poll_job():
