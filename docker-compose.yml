@@ -62,8 +62,8 @@ services:
       DNS_POLL_INTERVAL: ${DNS_POLL_INTERVAL:-3600}
       RECOMMENDATION_INTERVAL: ${RECOMMENDATION_INTERVAL:-86400}
       SCHEDULED_REPORT_CHECK_INTERVAL: ${SCHEDULED_REPORT_CHECK_INTERVAL:-86400}
-    expose:
-      - "8000"
+    ports:
+      - "127.0.0.1:8000:8000"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 15s
