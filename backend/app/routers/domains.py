@@ -9,6 +9,7 @@ Wizard flow:
   DELETE /domains/{id}          → remove domain
 """
 import uuid
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
@@ -317,7 +318,9 @@ async def _sync_domain_dns(domain: Domain) -> None:
         # "enforce"/"testing" in the first place).
         policy = await fetch_mta_sts_policy(domain.name)
         if policy["reachable"] and policy["mode"] in ("enforce", "testing"):
-            domain.mta_sts_stage = policy["mode"]
+            if domain.mta_sts_stage != policy["mode"]:
+                domain.mta_sts_stage = policy["mode"]
+                domain.mta_sts_policy_id = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
 
     # Auto-verify ownership whenever we do a DNS sync
     if not domain.ownership_verified:

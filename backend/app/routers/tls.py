@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -147,7 +148,9 @@ async def get_tls_record_diff(
         domain.mta_sts_published = True
         policy = await fetch_mta_sts_policy(domain.name)
         if policy["reachable"] and policy["mode"] in ("enforce", "testing"):
-            domain.mta_sts_stage = policy["mode"]
+            if domain.mta_sts_stage != policy["mode"]:
+                domain.mta_sts_stage = policy["mode"]
+                domain.mta_sts_policy_id = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
         await db.commit()
 
     diff = generate_record_diff(domain)
@@ -195,5 +198,6 @@ async def mark_tls_published(
     domain.tlsrpt_record_published = True
     domain.mta_sts_published = True
     domain.mta_sts_stage = "testing"
+    domain.mta_sts_policy_id = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
     await db.commit()
     return {"ok": True}

@@ -24,15 +24,20 @@ def generate_tlsrpt_record(domain_name: str, slug: str) -> str:
     return f"v=TLSRPTv1; rua={rua_mailto(slug)}"
 
 
-def generate_mta_sts_policy(domain_name: str, mx_hosts: list[str], mode: str = "testing") -> str:
+def generate_mta_sts_policy(domain_name: str, mx_hosts: list[str], mode: str = "testing", policy_id: str | None = None) -> str:
     """
-    MTA-STS policy file content.
+    MTA-STS policy file content (RFC 8461 §3.2).
     mode: testing | enforce | none
+    policy_id: the id: field — senders use this to detect changes. If not
+    supplied, falls back to a timestamp (adequate for self-hosted; for
+    managed hosting the caller should pass domain.mta_sts_policy_id so the
+    DNS TXT record and the served file stay in sync).
     """
-    now_id = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
+    pid = policy_id or datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
     lines = [
-        f"version: STSv1",
+        "version: STSv1",
         f"mode: {mode}",
+        f"id: {pid}",
         f"max_age: {86400 if mode == 'testing' else 604800}",
     ]
     for mx in mx_hosts:

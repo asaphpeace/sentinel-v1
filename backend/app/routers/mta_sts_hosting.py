@@ -208,7 +208,8 @@ async def serve_managed_policy(request: Request, db: AsyncSession = Depends(get_
         raise HTTPException(status_code=404, detail="Not found")
 
     mx_hosts = await resolve_mx_hosts(domain.name)
-    policy = generate_mta_sts_policy(domain.name, mx_hosts, mode=domain.mta_sts_stage if domain.mta_sts_stage in ("testing", "enforce") else "testing")
+    mode = domain.mta_sts_stage if domain.mta_sts_stage in ("testing", "enforce") else "testing"
+    policy = generate_mta_sts_policy(domain.name, mx_hosts, mode=mode, policy_id=domain.mta_sts_policy_id)
     return Response(content=policy, media_type="text/plain")
 
 
