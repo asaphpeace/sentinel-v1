@@ -246,6 +246,17 @@ const canAdvanceMta   = (s: number) => s < 2 && mtaBlockers().filter(b => b.seve
         <!-- Dry-run preview result — "will this break my email?" answered with data,
              not a promise, before the user touches DNS. -->
         <div v-if="simulationLoading" class="sim-panel sim-loading">Simulating impact against your collected traffic…</div>
+        <div v-else-if="simulation && simulation.total_volume === 0" class="sim-panel sim-nodata">
+          <div class="sim-head">
+            <span class="sim-icon">⚠</span>
+            <span>No report data yet — cannot assess impact</span>
+          </div>
+          <div class="sim-detail sim-warn-txt">
+            No DMARC aggregate reports have arrived for this domain yet. Wait until real senders
+            appear in your traffic data before advancing policy — otherwise you risk blocking
+            legitimate mail you haven't identified yet.
+          </div>
+        </div>
         <div v-else-if="simulation" :class="['sim-panel', simulation.safe ? 'sim-safe' : 'sim-risk']">
           <div class="sim-head">
             <span class="sim-icon">{{ simulation.safe ? '✓' : '⚠' }}</span>
@@ -523,6 +534,8 @@ const canAdvanceMta   = (s: number) => s < 2 && mtaBlockers().filter(b => b.seve
 .sim-loading { background: rgba(255,255,255,.03); border: 1px solid var(--line); color: var(--muted); font-family: var(--mono); font-size: 11.5px; }
 .sim-safe { background: rgba(52,224,161,.07); border: 1px solid rgba(52,224,161,.22); }
 .sim-risk { background: rgba(245,197,66,.07); border: 1px solid rgba(245,197,66,.25); }
+.sim-nodata { background: rgba(245,197,66,.07); border: 1px solid rgba(245,197,66,.25); }
+.sim-warn-txt { color: #f5e49a; }
 .sim-head { display: flex; gap: 9px; align-items: flex-start; color: var(--txt); font-weight: 600; }
 .sim-icon { flex: none; }
 .sim-detail { margin-top: 7px; padding-left: 23px; }
