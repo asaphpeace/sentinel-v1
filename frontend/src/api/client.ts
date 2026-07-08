@@ -91,6 +91,7 @@ export const api = {
   wizardTlsInfo: (domain: string) => request<any[]>('/domains/wizard/tls-info', { method: 'POST', body: JSON.stringify({ names: [domain] }) }).then(r => r[0]),
   wizardConfirm: (domain: string) => request<any>('/domains/wizard/confirm',    { method: 'POST', body: JSON.stringify({ names: [domain] }) }),
   wizardAbort:   (names: string[]) => request<void>('/domains/wizard/abort',    { method: 'POST', body: JSON.stringify({ names }) }),
+  wizardDetectPlatforms: (domain: string) => request<{ detected: string[]; mimecast_detected: boolean }>('/domains/wizard/detect-platforms', { method: 'POST', body: JSON.stringify({ domain }) }),
 
   // DMARC
   dmarcData:          (domainId: string) => request<any>(`/domains/${domainId}/dmarc`),

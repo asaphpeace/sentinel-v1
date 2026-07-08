@@ -22,6 +22,8 @@ const customOpen = ref(false)
 const customName = ref('')
 const loading = ref(true)
 const saving = ref(false)
+const detecting = ref(false)
+const detectResult = ref<string | null>(null)
 const setupModalKey = ref<string | null>(null)
 const domainIds = ref<string[]>([])
 
@@ -86,6 +88,42 @@ async function finish() {
 function skip() {
   emit('done')
 }
+
+async function detectFromDns() {
+  if (!props.domainNames.length) return
+  detecting.value = true
+  detectResult.value = null
+  try {
+    const domain = props.domainNames[0]
+    const { detected, mimecast_detected } = await api.wizardDetectPlatforms(domain)
+
+    const next = new Set(selected.value)
+    let added = 0
+
+    for (const key of detected) {
+      if (!next.has(key)) { next.add(key); added++ }
+    }
+    if (mimecast_detected) {
+      // Surface the Mimecast branch choice — just open the picker
+      mimecastChoiceOpen.value = true
+    }
+
+    selected.value = next
+
+    if (added === 0 && !mimecast_detected) {
+      detectResult.value = 'No known platforms detected in DNS — select manually or skip.'
+    } else {
+      const parts: string[] = []
+      if (added) parts.push(`${added} platform${added > 1 ? 's' : ''} detected`)
+      if (mimecast_detected) parts.push('Mimecast detected — choose your deployment mode below')
+      detectResult.value = parts.join('. ')
+    }
+  } catch {
+    detectResult.value = 'DNS probe failed — select platforms manually.'
+  } finally {
+    detecting.value = false
+  }
+}
 </script>
 
 <template>
@@ -139,8 +177,18 @@ function skip() {
       </div>
     </template>
 
+    <div v-if="detectResult" class="detect-result" :class="{ warn: detectResult.startsWith('No') || detectResult.startsWith('DNS') }">
+      {{ detectResult }}
+    </div>
+
     <div class="actions">
-      <button class="btn ghost" @click="skip">Skip — detect automatically</button>
+      <div class="actions-left">
+        <button class="btn ghost detect-btn" :disabled="detecting" @click="detectFromDns">
+          <span v-if="detecting" class="spinner" />
+          {{ detecting ? 'Scanning DNS…' : 'Detect from DNS' }}
+        </button>
+        <button class="btn ghost" @click="skip">Skip</button>
+      </div>
       <button class="btn" :disabled="saving" @click="finish">
         {{ saving ? 'Saving…' : 'Finish' }}
       </button>
@@ -192,7 +240,13 @@ function skip() {
 .selected-label { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: .5px; color: var(--faint); }
 .selected-chip { font-family: var(--mono); font-size: 10.5px; background: rgba(46,230,197,.1); color: var(--teal); border: 1px solid rgba(46,230,197,.25); border-radius: 8px; padding: 4px 10px; cursor: pointer; }
 
-.actions { display: flex; justify-content: space-between; gap: 10px; margin-top: 18px; }
+.detect-result { font-size: 11.5px; color: var(--teal); background: rgba(46,230,197,.08); border: 1px solid rgba(46,230,197,.2); border-radius: 9px; padding: 8px 12px; margin-bottom: 10px; }
+.detect-result.warn { color: var(--muted); background: rgba(255,255,255,.03); border-color: var(--line2); }
+.actions { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 18px; }
+.actions-left { display: flex; gap: 8px; }
+.detect-btn { display: flex; align-items: center; gap: 6px; }
+.spinner { width: 11px; height: 11px; border: 1.5px solid rgba(255,255,255,.2); border-top-color: var(--teal); border-radius: 50%; animation: spin .7s linear infinite; flex-shrink: 0; }
+@keyframes spin { to { transform: rotate(360deg); } }
 .btn { background: linear-gradient(90deg,#5b6ef5,#8b5cf6); color: #fff; border: none; border-radius: 12px; padding: 11px 18px; font-family: var(--disp); font-weight: 700; font-size: 13px; cursor: pointer; }
 .btn.ghost { background: rgba(255,255,255,.04); border: 1px solid var(--line2); color: var(--txt); box-shadow: none; }
 .btn:disabled { opacity: .6; cursor: not-allowed; }

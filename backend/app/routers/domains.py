@@ -26,6 +26,7 @@ from app.schemas.domain import (
     SubdomainDispositionIn,
 )
 from app.services.dmarc_service import check_dmarc_dns, generate_dmarc_record
+from app.services.dns_service import _txt_lookup, _cname_lookup
 from app.services.tls_service import (
     check_mta_sts_dns, check_tlsrpt_dns, generate_mta_sts_dns_record,
     generate_mta_sts_policy, generate_tlsrpt_record, fetch_mta_sts_policy,
@@ -321,6 +322,105 @@ async def wizard_abort(
             )
         )
         await db.commit()
+
+
+@router.post("/wizard/detect-platforms")
+async def wizard_detect_platforms(
+    payload: dict,
+    user: User = Depends(get_current_user),
+):
+    """
+    Probe a domain's live DNS and return a list of likely sending-platform keys.
+    Checks: SPF include: targets, known DKIM selectors (TXT + CNAME), MX records.
+    Returns { detected: [key, ...], mimecast_detected: bool } — caller decides
+    how to handle the mimecast deployment-mode branch question.
+    """
+    import asyncio
+    import re
+    from app.knowledge.platforms import PLATFORM_PROFILES
+
+    domain = payload.get("domain", "").strip().lower()
+    if not domain:
+        return {"detected": [], "mimecast_detected": False}
+
+    # ── SPF → platform map derived from the library ──────────────────────────
+    spf_include_map: dict[str, str] = {}
+    for profile in PLATFORM_PROFILES.values():
+        for mech in profile.spf:
+            target = mech.mechanism.replace("include:", "")
+            spf_include_map[target] = profile.key
+    # Mimecast uses a different SPF include
+    spf_include_map["_netblocks.mimecast.com"] = "_mimecast"
+
+    # ── DKIM selector → platform (check CNAME then TXT) ─────────────────────
+    # Only selectors that are deterministic for a single platform
+    dkim_selector_map: dict[str, str] = {
+        "google":    "google_workspace",
+        "s1":        "sendgrid",
+        "s2":        "sendgrid",
+        "selector1": "microsoft_365",
+        "selector2": "microsoft_365",
+        "k1":        "mailchimp",
+        "k2":        "mailchimp",
+        "pm":        "postmark",
+        "smtp":      "mailgun",
+        "zendesk1":  "zendesk",
+        "zoho":      "zoho",
+        "hs1":       "hubspot",
+        "hs2":       "hubspot",
+        "scph0316":  "sparkpost",
+        "scph0218":  "sparkpost",
+    }
+
+    detected: set[str] = set()
+    mimecast_detected = False
+
+    # ── SPF lookup ────────────────────────────────────────────────────────────
+    spf_txt = await _txt_lookup(domain)
+    if spf_txt:
+        for part in spf_txt.split():
+            if part.startswith("include:"):
+                target = part[8:]
+                if target in spf_include_map:
+                    key = spf_include_map[target]
+                    if key == "_mimecast":
+                        mimecast_detected = True
+                    else:
+                        detected.add(key)
+
+    # ── DKIM selector probes (parallel) ──────────────────────────────────────
+    async def probe_selector(sel: str) -> str | None:
+        fqdn = f"{sel}._domainkey.{domain}"
+        cname = await _cname_lookup(fqdn)
+        if cname:
+            return dkim_selector_map.get(sel)
+        txt = await _txt_lookup(fqdn)
+        if txt and ("p=" in txt or "v=DKIM1" in txt):
+            return dkim_selector_map.get(sel)
+        return None
+
+    results = await asyncio.gather(*[probe_selector(s) for s in dkim_selector_map])
+    for key in results:
+        if key:
+            detected.add(key)
+
+    # ── MX hints for groupware (groupware SPF is often omitted) ──────────────
+    import dns.exception
+    from app.services.dns_resolver import resolver as _res
+    try:
+        mx_answers = await _res.resolve(domain, "MX")
+        for r in mx_answers:
+            host = str(r.exchange).lower().rstrip(".")
+            if "google" in host or "aspmx" in host:
+                detected.add("google_workspace")
+            elif "outlook" in host or "protection.microsoft" in host:
+                detected.add("microsoft_365")
+            elif "mimecast" in host:
+                mimecast_detected = True
+    except dns.exception.DNSException:
+        pass
+
+    return {"detected": sorted(detected), "mimecast_detected": mimecast_detected}
 
 
 async def _sync_domain_dns(domain: Domain) -> None:
