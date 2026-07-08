@@ -48,10 +48,8 @@ onMounted(async () => {
   try {
     for (let i = 0; i < props.domains.length; i++) {
       loadingIdx.value = i
-      const [dmarc, tls] = await Promise.all([
-        api.wizardStart(props.domains[i]),
-        api.wizardTlsInfo(props.domains[i]),
-      ])
+      const dmarc = await api.wizardStart(props.domains[i])
+      const tls   = await api.wizardTlsInfo(props.domains[i])
       items.value.push({
         ...dmarc,
         ...tls,
