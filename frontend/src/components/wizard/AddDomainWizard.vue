@@ -22,7 +22,8 @@ function step1Done(d: string[]) { domains.value = d; step.value = 1 }
 function step2Done(names: string[]) { confirmedDomainNames.value = names; step.value = 2 }
 function done() {
   emit('close')
-  router.push({ name: 'roadmap' })
+  const first = confirmedDomainNames.value[0]
+  router.push({ name: 'roadmap', query: first ? { domain: first } : {} })
 }
 
 async function abort() {
