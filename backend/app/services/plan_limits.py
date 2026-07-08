@@ -61,7 +61,7 @@ PLAN_LIMITS: dict[str, dict] = {
         "api_access":   True,
         "white_label":  True,
         "scheduled_reports": True,
-        "audit_log":    False,
+        "audit_log":    True,
     },
     "enterprise": {
         "domains":      None,
