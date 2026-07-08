@@ -6,6 +6,7 @@ import WizardStep1Domains   from './WizardStep1Domains.vue'
 import WizardStep2Records   from './WizardStep2Records.vue'
 import WizardStepPlatforms  from './WizardStepPlatforms.vue'
 import { useRouter } from 'vue-router'
+import { api } from '@/api/client'
 
 const emit = defineEmits<{ close: [] }>()
 const ui     = useUiStore()
@@ -23,11 +24,20 @@ function done() {
   emit('close')
   router.push({ name: 'roadmap' })
 }
+
+async function abort() {
+  // Delete any is_active=false draft domains created by wizardStart.
+  // Fire-and-forget — don't block the UI close on a network call.
+  if (domains.value.length && step.value < 2) {
+    api.wizardAbort(domains.value).catch(() => {})
+  }
+  emit('close')
+}
 </script>
 
 <template>
   <Teleport to="body">
-    <div class="overlay" @click.self="emit('close')">
+    <div class="overlay" @click.self="abort">
       <div class="wizard-panel">
         <div class="wizard-header">
           <div class="wh-title">
@@ -38,7 +48,7 @@ function done() {
             </div>
             Add domains to Sentinel
           </div>
-          <button class="close-btn" @click="emit('close')">×</button>
+          <button class="close-btn" @click="abort">×</button>
         </div>
 
         <div class="wizard-steps">
@@ -47,7 +57,7 @@ function done() {
 
         <div class="wizard-body">
           <WizardStep1Domains v-if="step === 0" @next="step1Done" />
-          <WizardStep2Records v-else-if="step === 1" :domains="domains" @next="step2Done" @cancel="emit('close')" />
+          <WizardStep2Records v-else-if="step === 1" :domains="domains" @next="step2Done" @cancel="abort" />
           <WizardStepPlatforms v-else :domain-names="confirmedDomainNames" @done="done" />
         </div>
       </div>

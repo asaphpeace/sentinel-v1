@@ -298,6 +298,31 @@ async def wizard_confirm(
     return {"activated": activated}
 
 
+@router.post("/wizard/abort", status_code=204)
+async def wizard_abort(
+    payload: dict,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """
+    Called when the wizard is dismissed without completing confirm.
+    Deletes any is_active=False draft domains that were created by wizardStart
+    so they don't squatter the tenant's domain namespace.
+    Only deletes drafts — active domains are never touched.
+    """
+    from sqlalchemy import delete as sa_delete
+    names = payload.get("names", [])
+    if names:
+        await db.execute(
+            sa_delete(Domain).where(
+                Domain.name.in_(names),
+                Domain.tenant_id == user.tenant_id,
+                Domain.is_active == False,
+            )
+        )
+        await db.commit()
+
+
 async def _sync_domain_dns(domain: Domain) -> None:
     """Live DNS check → mutate published flags on the domain object (caller commits)."""
     dmarc  = await check_dmarc_dns(domain.name)

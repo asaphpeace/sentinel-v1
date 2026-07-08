@@ -90,6 +90,7 @@ export const api = {
   wizardStart:   (domain: string) => request<any[]>('/domains/wizard/start',    { method: 'POST', body: JSON.stringify({ names: [domain] }) }).then(r => r[0]),
   wizardTlsInfo: (domain: string) => request<any[]>('/domains/wizard/tls-info', { method: 'POST', body: JSON.stringify({ names: [domain] }) }).then(r => r[0]),
   wizardConfirm: (domain: string) => request<any>('/domains/wizard/confirm',    { method: 'POST', body: JSON.stringify({ names: [domain] }) }),
+  wizardAbort:   (names: string[]) => request<void>('/domains/wizard/abort',    { method: 'POST', body: JSON.stringify({ names }) }),
 
   // DMARC
   dmarcData:          (domainId: string) => request<any>(`/domains/${domainId}/dmarc`),
