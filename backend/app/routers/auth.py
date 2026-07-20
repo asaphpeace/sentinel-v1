@@ -82,7 +82,7 @@ async def get_current_user(
         raise credentials_exception
     # token_version is absent only on the legacy/2fa-pre-auth token shape;
     # any full session token issued after this feature always carries it.
-    if token_version is not None and token_version != user.token_version:
+    if token_version is not None and user.token_version is not None and token_version != user.token_version:
         raise credentials_exception
     return user
 
