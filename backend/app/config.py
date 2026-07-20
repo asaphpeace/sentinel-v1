@@ -74,10 +74,13 @@ class Settings(BaseSettings):
     stripe_price_msp_monthly: str = ""
     stripe_price_msp_annual: str = ""
 
-    # Transactional email — SendGrid REST API via httpx, no SDK dependency.
-    # If sendgrid_api_key is unset, send_email() logs the rendered email
+    # Transactional email — sent via SMTP (aiosmtplib, STARTTLS on port 587).
+    # If smtp_host is unset, send_email() logs the rendered email to stdout
     # instead of sending it, so dev/test environments work with zero config.
-    sendgrid_api_key: str = ""
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
     email_from_address: str = "noreply@mailsentry.co.za"
     email_from_name: str = "Sentinel"
 
@@ -87,6 +90,16 @@ class Settings(BaseSettings):
     # actually deployed with real scanning infrastructure — see
     # ARCHITECTURE.md's scanning-egress isolation note.
     command_aws_account_id: str = ""
+
+    # boto3 clients that don't go through Prowler's own CLI (e.g. the
+    # inspector2 client in cloud_scan_service.py) need an explicit region —
+    # unlike sts, inspector2 has no global endpoint, and this environment
+    # has no default region configured, which surfaces as a hard
+    # NoRegionError rather than a silent wrong-region call. Inspector2 is
+    # regional; a real deployment scanning multiple regions needs to either
+    # iterate per-region or ask the customer which region(s) to scan — not
+    # handled yet, single-region is today's simplification.
+    command_aws_default_region: str = "us-east-1"
 
     # Prowler lives in its own venv (backend/.venv-prowler) — its exact pins
     # (pydantic==2.12.5, boto3==1.40.61 at time of writing) conflict outright
@@ -109,6 +122,49 @@ class Settings(BaseSettings):
         ".venv-iam-tools/Scripts/python.exe" if _os.name == "nt" else ".venv-iam-tools/bin/python"
     )
     command_scan_timeout_seconds: int = 900
+    # How often the background job checks for connections due a rescan —
+    # matches V1's existing interval-job settings (e.g. cert_probe_interval)
+    # in spirit, not a per-connection schedule; every connection with an
+    # active engagement gets rescanned every time this fires.
+    command_rescan_interval: int = 21600  # 6h, matching BUILD_PLAN.md's original "recon every 6h" intent
+
+    # How often the CloudTrail escalation poll runs (ITDR_DESIGN.md). Much
+    # tighter than the posture rescan interval — this is meant to catch an
+    # active attacker, not a slow drift in configuration, so it polls the
+    # last 24h/since-last-poll window frequently rather than every 6h.
+    command_threat_detection_interval: int = 300  # 5 minutes
+
+    # Real e-signature for the Engagement rules-of-engagement gate
+    # (ARCHITECTURE.md Section 9) — Dropbox Sign, not DocuSign, chosen there
+    # for embedded-signing-first API + lower per-signature cost at this
+    # volume. Blank by default (matches the stripe/sendgrid key pattern) —
+    # request_signature() 503s cleanly with no key configured rather than
+    # silently no-op'ing.
+    dropbox_sign_api_key: str = ""
+    # Dropbox Sign's sandbox mode: signatures complete instantly without a
+    # real signer action and are NOT legally binding. True by default so a
+    # fresh dev/test environment never accidentally sends a real, binding
+    # signature request — must be explicitly set False for production.
+    dropbox_sign_test_mode: bool = True
+
+    # Escape hatch kept for local/CI testing of the Tier 0 scan pipeline
+    # end-to-end without needing a real Dropbox Sign account — see
+    # approve_engagement()'s docstring. Must be False in any real deployment;
+    # the real gate is request_signature() + the signed-webhook callback.
+    command_allow_direct_engagement_approval: bool = True
+
+    # Phishing Tier A — Spoof Proof (PHISHING_DESIGN.md Section 2.3). DMARC
+    # policy and domain registrations don't drift weekly, but a quarterly
+    # check would catch a real change too slowly — monthly is the chosen
+    # middle ground.
+    command_impersonation_scan_interval_days: int = 30
+
+    # Phishing Tier B — Human Simulation (PHISHING_DESIGN.md Section 3).
+    # Tracking pixel/click/submit URLs are backend API endpoints, not
+    # frontend routes — deliberately a separate setting from app_base_url
+    # (which every existing link in this codebase points at the frontend),
+    # not reused, since these are structurally different link targets.
+    command_phishing_track_base_url: str = "http://localhost:9931"
 
 
 settings = Settings()

@@ -1,4 +1,5 @@
 fastapi==0.111.0
+aiosmtplib>=3.0.0
 uvicorn[standard]==0.29.0
 sqlalchemy[asyncio]==2.0.30
 asyncpg==0.29.0
@@ -28,6 +29,9 @@ qrcode[pil]==7.4.2
 
 # Sentinel Command — Tier 0 cloud posture scanning
 boto3==1.34.144
+
+# Sentinel Command — Host & Server Security, Lynis-over-SSH for non-AWS hosts
+paramiko==3.4.0
 
 # Testing
 pytest>=9.0
