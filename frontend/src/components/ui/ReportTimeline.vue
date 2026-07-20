@@ -155,8 +155,9 @@ function onInputFrom(e: Event) {
   if (!val) { selectAll(); return }
   // Snap histogram selection to nearest bucket >= this date
   const idx = buckets.value.findIndex((b: any) => b.week_start >= val)
-  fromIdx.value = idx === -1 ? 0 : idx
-  toIdx.value   = toIdx.value === null ? buckets.value.length - 1 : Math.max(fromIdx.value, toIdx.value as number)
+  const newFrom = idx === -1 ? 0 : idx
+  fromIdx.value = newFrom
+  toIdx.value   = toIdx.value === null ? buckets.value.length - 1 : Math.max(newFrom, toIdx.value)
   emitChange()
 }
 
