@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '@/api/client'
+import DateRangeFilter from '@/components/ui/DateRangeFilter.vue'
 
 const router = useRouter()
 
@@ -9,12 +10,14 @@ const entries     = ref<any[]>([])
 const loading     = ref(false)
 const offset      = ref(0)
 const totalCount   = ref(0)
+const days         = ref(30)
 const upgradeInfo  = ref<{ message: string; current_plan: string } | null>(null)
 const loadError    = ref<string | null>(null)
 
 const PAGE_SIZE = 50
 
 onMounted(load)
+watch(days, () => { offset.value = 0; load() })
 
 async function load(append = false) {
   loading.value = true
@@ -22,8 +25,8 @@ async function load(append = false) {
   loadError.value = null
   try {
     const [rows, countRes] = await Promise.all([
-      api.auditLog(PAGE_SIZE, append ? offset.value : 0),
-      api.auditLogCount(),
+      api.auditLog(PAGE_SIZE, append ? offset.value : 0, days.value),
+      api.auditLogCount(days.value),
     ])
     entries.value = append ? [...entries.value, ...rows] : rows
     totalCount.value = countRes.count ?? 0
@@ -69,6 +72,10 @@ function formatTime(iso: string): string {
         <h1>Audit Log</h1>
         <div class="sub">Who changed what, and when — every security and admin-relevant action in this workspace</div>
       </div>
+    </div>
+
+    <div style="margin-bottom:16px">
+      <DateRangeFilter v-model="days" />
     </div>
 
     <!-- Upgrade prompt — feature not on current plan -->

@@ -4,13 +4,15 @@ import { api } from '@/api/client'
 import { useDomainsStore } from '@/stores/domains'
 import TimelineEntry from '@/components/ui/TimelineEntry.vue'
 import AdvisorBanner from '@/components/ui/AdvisorBanner.vue'
+import DateRangeFilter from '@/components/ui/DateRangeFilter.vue'
 
 const domains      = useDomainsStore()
 const timeline     = ref<any[]>([])
 const loading      = ref(false)
 const syncing      = ref(false)
 const filterType   = ref<string>('all')
-const domainFilter = ref<string>('all')   // 'all' or domain name
+const domainFilter = ref<string>('all')
+const days         = ref(30)
 const offset       = ref(0)
 const totalCount   = ref(0)
 const lastSyncedAt = ref<string | null>(null)
@@ -62,11 +64,11 @@ async function loadTimeline(append = false) {
     const dom = selectedDomain()
     const [entries, countRes] = await Promise.all([
       dom
-        ? api.dnsTimeline(dom.id, PAGE_SIZE, append ? offset.value : 0)
-        : api.dnsTenantTimeline(PAGE_SIZE, append ? offset.value : 0),
+        ? api.dnsTimeline(dom.id, PAGE_SIZE, append ? offset.value : 0, days.value)
+        : api.dnsTenantTimeline(PAGE_SIZE, append ? offset.value : 0, days.value),
       dom
-        ? api.dnsTimelineCount(dom.id)
-        : api.dnsTenantCount(),
+        ? api.dnsTimelineCount(dom.id, days.value)
+        : api.dnsTenantCount(days.value),
     ])
     if (append) {
       timeline.value = [...timeline.value, ...entries]
@@ -90,6 +92,11 @@ async function changeDomain() {
   filterType.value = 'all'
   await loadTimeline()
 }
+
+watch(days, () => {
+  offset.value = 0
+  loadTimeline()
+})
 
 async function syncNow() {
   const dom = selectedDomain()
@@ -204,8 +211,9 @@ function isYesterday(d: Date) {
       </div>
     </div>
 
-    <!-- Controls row: domain dropdown + record type filter -->
+    <!-- Controls row: date filter + domain dropdown + record type filter -->
     <div class="controls">
+      <DateRangeFilter v-model="days" />
       <!-- Domain dropdown -->
       <div class="select-wrap">
         <svg class="sel-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

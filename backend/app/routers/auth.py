@@ -564,7 +564,7 @@ async def _send_verification_email(db: AsyncSession, user: User) -> None:
     await db.commit()
 
     verify_url = f"{settings.app_base_url}/verify-email?token={token}"
-    await email_service.send_email(
+    sent = await email_service.send_email(
         to=user.email,
         subject="Verify your email for Sentinel",
         title="Verify your email address",
@@ -577,6 +577,8 @@ async def _send_verification_email(db: AsyncSession, user: User) -> None:
         ),
         text_body=f"Verify your email for Sentinel: {verify_url} (expires in {_VERIFY_TOKEN_EXPIRE_HOURS} hours)",
     )
+    if not sent:
+        _log.warning("Verification email failed to send to %s — check SENDGRID_API_KEY and sender address", user.email)
 
 
 @router.post("/verify-email", status_code=204)
@@ -619,6 +621,28 @@ async def resend_verification(
     )
     await db.commit()
     await _send_verification_email(db, user)
+
+
+@router.post("/send-test-email", status_code=204)
+async def send_test_email(
+    user: User = Depends(get_current_user),
+):
+    """Admin-only: sends a test email to the requesting user to verify SendGrid is configured correctly on this environment."""
+    _require_admin(user)
+    from app.config import settings
+    sent = await email_service.send_email(
+        to=user.email,
+        subject="Sentinel — test email",
+        title="Test email",
+        body_html=(
+            "<p>This is a test email from Sentinel.</p>"
+            "<p>If you received this, SendGrid is configured correctly.</p>"
+            f"<p style=\"color:#888;font-size:12px;\">Sent from: {settings.email_from_address}</p>"
+        ),
+        text_body="This is a test email from Sentinel. If you received this, SendGrid is configured correctly.",
+    )
+    if not sent:
+        raise HTTPException(status_code=502, detail="Email send failed — check SENDGRID_API_KEY and sender verification in SendGrid.")
 
 
 @router.delete("/account", status_code=204)

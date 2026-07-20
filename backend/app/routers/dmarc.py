@@ -7,6 +7,8 @@ from __future__ import annotations
 import uuid
 from collections import defaultdict
 
+from datetime import datetime, timedelta, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -156,14 +158,18 @@ def _build_sources(aggs: list[DmarcAggregate]) -> list[DmarcSourceOut]:
 @router.get("", response_model=DmarcOverviewOut)
 async def get_dmarc_overview(
     domain_id: str,
+    days: int = Query(30, ge=1, le=365),
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
     domain = await _get_domain(domain_id, user.tenant_id, db)
 
-    # Load all aggregates for this domain
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
     result = await db.execute(
-        select(DmarcAggregate).where(DmarcAggregate.domain_id == domain.id)
+        select(DmarcAggregate).where(
+            DmarcAggregate.domain_id == domain.id,
+            DmarcAggregate.period_begin >= cutoff,
+        )
     )
     aggs = result.scalars().all()
 

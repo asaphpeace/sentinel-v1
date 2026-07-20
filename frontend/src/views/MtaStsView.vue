@@ -12,6 +12,7 @@ import AskFollowUp from '@/components/ui/AskFollowUp.vue'
 import MtaStsHostingStatus from '@/components/domain/MtaStsHostingStatus.vue'
 import MxReadinessScorecard from '@/components/domain/MxReadinessScorecard.vue'
 import ConceptCardButton from '@/components/ui/ConceptCardButton.vue'
+import DateRangeFilter from '@/components/ui/DateRangeFilter.vue'
 
 const ALL = '__all__'
 const router  = useRouter()
@@ -19,6 +20,7 @@ const domains = useDomainsStore()
 const ui = useUiStore()
 
 const selected       = ref<string>(ALL)
+const days           = ref(30)
 const data           = ref<any>(null)
 const diff           = ref<any>(null)
 const advisor        = ref<any>(null)
@@ -33,9 +35,10 @@ onMounted(async () => {
 })
 
 watch(selected, () => {
-  advisor.value = null  // clear stale context on domain switch
+  advisor.value = null
   loadData(false)
 })
+watch(days, () => loadData(false))
 
 async function loadData(initialLoad = false) {
   loading.value = true
@@ -48,7 +51,7 @@ async function loadData(initialLoad = false) {
     } else {
       const dom = domains.list.find(d => d.domain === capturedSelection)
       if (!dom) { loading.value = false; advisorLoading.value = false; return }
-      data.value = await api.tlsData(dom.id)
+      data.value = await api.tlsData(dom.id, days.value)
     }
   } finally { loading.value = false }
 
@@ -148,8 +151,9 @@ function goToRoadmap() {
       <button v-if="selected !== ALL" class="btn" @click="openReview">Review TLS record →</button>
     </div>
 
-    <!-- Domain dropdown -->
-    <div style="margin-bottom:16px">
+    <!-- Domain dropdown + date filter -->
+    <div style="margin-bottom:16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+      <DateRangeFilter v-model="days" />
       <select v-model="selected" class="dom-select">
         <option :value="ALL">All domains</option>
         <option disabled value="">──────────</option>
@@ -183,7 +187,7 @@ function goToRoadmap() {
       </div>
 
       <div class="card">
-        <div class="ct"><h3>Domain breakdown</h3><span class="sectag">all domains · last 30 days</span></div>
+        <div class="ct"><h3>Domain breakdown</h3><span class="sectag">all domains · last {{ days }}d</span></div>
         <div class="dom-table">
           <div class="dom-thead">
             <span>Domain</span>
@@ -229,7 +233,7 @@ function goToRoadmap() {
           dot-color="var(--teal)"
           :delta-color="data.mta_sts_stage === 'enforce' ? 'var(--good)' : data.mta_sts_stage === 'testing' ? 'var(--amber)' : 'var(--bad)'"
         />
-        <KpiCard label="TLS sessions"    :value="(data.total_sessions ?? 0).toLocaleString()" delta="last 30 days"    dot-color="var(--indigo)" />
+        <KpiCard label="TLS sessions"    :value="(data.total_sessions ?? 0).toLocaleString()" :delta="`last ${days}d`"    dot-color="var(--indigo)" />
         <KpiCard label="TLS pass rate"   :value="data.pass_pct != null ? data.pass_pct + '%' : '—'" delta="successful" dot-color="var(--good)"  delta-color="var(--good)" />
         <KpiCard label="Policy failures" :value="(data.failed_sessions ?? 0).toLocaleString()"    delta="need review" dot-color="var(--bad)"   delta-color="var(--bad)" />
       </div>
@@ -299,7 +303,7 @@ function goToRoadmap() {
 
         <!-- Failure analysis card -->
         <div class="card">
-          <div class="ct"><h3>Failure analysis</h3><span class="sectag">last 30 days</span></div>
+          <div class="ct"><h3>Failure analysis</h3><span class="sectag">last {{ days }}d</span></div>
 
           <!-- Pass/fail bar -->
           <div v-if="data.total_sessions > 0" style="margin-bottom:20px">

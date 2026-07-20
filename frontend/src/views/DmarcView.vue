@@ -9,6 +9,7 @@ import DmarcAuthDrawer from '@/components/domain/DmarcAuthDrawer.vue'
 import RecordReviewModal from '@/components/domain/RecordReviewModal.vue'
 import DataDeadZone from '@/components/ui/DataDeadZone.vue'
 import ConceptCardButton from '@/components/ui/ConceptCardButton.vue'
+import DateRangeFilter from '@/components/ui/DateRangeFilter.vue'
 
 const route   = useRoute()
 const router  = useRouter()
@@ -16,6 +17,7 @@ const domains = useDomainsStore()
 
 const ALL = '__all__'
 const selected = ref<string>((route.query.domain as string) ?? ALL)
+const days            = ref(30)
 const data            = ref<any>(null)
 const diff            = ref<any>(null)
 const advisor         = ref<any>(null)
@@ -30,9 +32,10 @@ onMounted(async () => {
 })
 
 watch(selected, () => {
-  advisor.value = null  // clear stale context on domain switch
+  advisor.value = null
   loadData(false)
 })
+watch(days, () => loadData(false))
 
 async function loadData(initialLoad = false) {
   loading.value = true
@@ -41,12 +44,12 @@ async function loadData(initialLoad = false) {
   const capturedSelection = selected.value
   try {
     if (capturedSelection === ALL) {
-      const results = await Promise.all(domains.list.map(d => api.dmarcData(d.id)))
+      const results = await Promise.all(domains.list.map(d => api.dmarcData(d.id, days.value)))
       data.value = mergeOverviews(results)
     } else {
       const dom = domains.list.find(d => d.domain === capturedSelection)
       if (!dom) { loading.value = false; advisorLoading.value = false; return }
-      data.value = await api.dmarcData(dom.id)
+      data.value = await api.dmarcData(dom.id, days.value)
     }
   } finally { loading.value = false }
 
@@ -192,8 +195,9 @@ async function monitorSubdomain(hostname: string) {
       <button v-if="selected !== '__all__'" class="btn" @click="loadDiff">Review record →</button>
     </div>
 
-    <!-- Domain dropdown -->
+    <!-- Domain dropdown + date filter -->
     <div class="domain-bar">
+      <DateRangeFilter v-model="days" />
       <div class="domain-select-wrap">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sel-icon"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
         <select v-model="selected" class="domain-select">

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException
+from datetime import datetime, timedelta, timezone
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -70,13 +70,18 @@ def _build_fail_types(aggs: list) -> list[TlsFailTypeOut]:
 @router.get("", response_model=TlsOverviewOut)
 async def get_tls_overview(
     domain_id: str,
+    days: int = Query(30, ge=1, le=365),
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
     domain = await _get_domain(domain_id, user.tenant_id, db)
 
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
     result = await db.execute(
-        select(TlsAggregate).where(TlsAggregate.domain_id == domain.id)
+        select(TlsAggregate).where(
+            TlsAggregate.domain_id == domain.id,
+            TlsAggregate.period_begin >= cutoff,
+        )
     )
     aggs = result.scalars().all()
 

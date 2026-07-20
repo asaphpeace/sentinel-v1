@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '@/api/client'
 import { useDomainsStore } from '@/stores/domains'
@@ -12,14 +12,22 @@ import ReportWizard from '@/components/ui/ReportWizard.vue'
 import ScanDomainModal from '@/components/ui/ScanDomainModal.vue'
 import AdvisorBanner from '@/components/ui/AdvisorBanner.vue'
 import AddDomainWizard from '@/components/wizard/AddDomainWizard.vue'
+import DateRangeFilter from '@/components/ui/DateRangeFilter.vue'
 
 const router  = useRouter()
 const domains = useDomainsStore()
 const ui      = useUiStore()
+const days    = ref(30)
 
 const showReport = ref(false)
 const showScan   = ref(false)
 const showWizard = ref(false)
+
+async function loadThreat() {
+  threat.value = await api.threatSurface(days.value)
+}
+
+watch(days, loadThreat)
 
 async function onWizardClose() {
   showWizard.value = false
@@ -28,7 +36,7 @@ async function onWizardClose() {
     await domains.fetch()
     ;[overview.value, threat.value] = await Promise.all([
       api.overview(),
-      api.threatSurface(),
+      api.threatSurface(days.value),
     ])
   } finally { loading.value = false }
 }
@@ -45,7 +53,7 @@ onMounted(async () => {
     await domains.fetch()
     ;[overview.value, threat.value] = await Promise.all([
       api.overview(),
-      api.threatSurface(),
+      api.threatSurface(days.value),
     ])
   } finally { loading.value = false }
 
@@ -141,6 +149,7 @@ const tlsTotal = computed(() => o.value
         </div>
       </div>
       <div class="header-actions">
+        <DateRangeFilter v-model="days" />
         <button class="action-btn scan" @click="showScan = true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
             <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>

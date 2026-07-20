@@ -83,8 +83,8 @@ export const api = {
       body: JSON.stringify({ to_email: toEmail, record_type: recordType }),
     }),
   // Audit log (Enterprise only)
-  auditLog: (limit = 50, offset = 0) => request<any[]>(`/audit-log?limit=${limit}&offset=${offset}`),
-  auditLogCount: () => request<{ count: number }>('/audit-log/count'),
+  auditLog: (limit = 50, offset = 0, days = 30) => request<any[]>(`/audit-log?limit=${limit}&offset=${offset}&days=${days}`),
+  auditLogCount: (days = 30) => request<{ count: number }>(`/audit-log/count?days=${days}`),
 
   // Wizard — one domain per call, backend expects { names: [...] } and returns array
   wizardStart:   (domain: string) => request<any[]>('/domains/wizard/start',    { method: 'POST', body: JSON.stringify({ names: [domain] }) }).then(r => r[0]),
@@ -94,12 +94,12 @@ export const api = {
   wizardDetectPlatforms: (domain: string) => request<{ detected: string[]; mimecast_detected: boolean }>('/domains/wizard/detect-platforms', { method: 'POST', body: JSON.stringify({ domain }) }),
 
   // DMARC
-  dmarcData:          (domainId: string) => request<any>(`/domains/${domainId}/dmarc`),
+  dmarcData:          (domainId: string, days = 30) => request<any>(`/domains/${domainId}/dmarc?days=${days}`),
   dmarcRecordDiff:    (domainId: string) => request<any>(`/domains/${domainId}/dmarc/record-diff`),
   dmarcMarkPublished: (domainId: string) => request<any>(`/domains/${domainId}/dmarc/mark-published`, { method: 'POST' }),
 
   // TLS
-  tlsData:          (domainId: string) => request<any>(`/domains/${domainId}/tls`),
+  tlsData:          (domainId: string, days = 30) => request<any>(`/domains/${domainId}/tls?days=${days}`),
   tlsRecordDiff:    (domainId: string) => request<any>(`/domains/${domainId}/tls/record-diff`),
   tlsMarkPublished: (domainId: string) => request<any>(`/domains/${domainId}/tls/mark-published`, { method: 'POST' }),
   tlsDomainSummary: () => request<any[]>('/overview/tls-summary'),
@@ -112,10 +112,10 @@ export const api = {
   probeCerts: (domainId: string) => request<any>(`/domains/${domainId}/certs/probe`, { method: 'POST' }),
 
   // DNS
-  dnsTimeline:       (domainId: string, limit = 50, offset = 0) => request<any[]>(`/domains/${domainId}/dns-timeline?limit=${limit}&offset=${offset}`),
-  dnsTimelineCount:  (domainId: string) => request<any>(`/domains/${domainId}/dns-timeline/count`),
-  dnsTenantTimeline: (limit = 100, offset = 0) => request<any[]>(`/tenant/dns-timeline?limit=${limit}&offset=${offset}`),
-  dnsTenantCount:    () => request<any>('/tenant/dns-timeline/count'),
+  dnsTimeline:       (domainId: string, limit = 50, offset = 0, days = 30) => request<any[]>(`/domains/${domainId}/dns-timeline?limit=${limit}&offset=${offset}&days=${days}`),
+  dnsTimelineCount:  (domainId: string, days = 30) => request<any>(`/domains/${domainId}/dns-timeline/count?days=${days}`),
+  dnsTenantTimeline: (limit = 100, offset = 0, days = 30) => request<any[]>(`/tenant/dns-timeline?limit=${limit}&offset=${offset}&days=${days}`),
+  dnsTenantCount:    (days = 30) => request<any>(`/tenant/dns-timeline/count?days=${days}`),
 
   // Concept Cards
   conceptRender: (id: string, context: Record<string, any> = {}) =>
@@ -220,6 +220,8 @@ export const api = {
     request<void>('/auth/verify-email', { method: 'POST', body: JSON.stringify({ token }) }),
   resendVerification: () =>
     request<void>('/auth/resend-verification', { method: 'POST' }),
+  sendTestEmail: () =>
+    request<void>('/auth/send-test-email', { method: 'POST' }),
   deleteAccount:  () => request<void>('/auth/account', { method: 'DELETE' }),
   enable2fa:      () => request<any>('/auth/2fa/enable', { method: 'POST' }),
   verify2fa:      (code: string) => request<void>('/auth/2fa/verify', { method: 'POST', body: JSON.stringify({ code }) }),

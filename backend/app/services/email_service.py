@@ -30,6 +30,20 @@ log = logging.getLogger(__name__)
 _SENDGRID_URL = "https://api.sendgrid.com/v3/mail/send"
 
 
+def _startup_check() -> None:
+    from app.config import settings
+    if settings.sendgrid_api_key:
+        log.info("Email: SendGrid configured (from=%s)", settings.email_from_address)
+    else:
+        log.warning(
+            "Email: SENDGRID_API_KEY is not set — all emails will be logged to stdout only. "
+            "Set it in .env to enable real delivery."
+        )
+
+
+_startup_check()
+
+
 class Attachment:
     """One file to attach — content is raw bytes, base64-encoded at send time."""
 
