@@ -94,7 +94,15 @@ export const api = {
   wizardDetectPlatforms: (domain: string) => request<{ detected: string[]; mimecast_detected: boolean }>('/domains/wizard/detect-platforms', { method: 'POST', body: JSON.stringify({ domain }) }),
 
   // DMARC
-  dmarcData:          (domainId: string, days = 30) => request<any>(`/domains/${domainId}/dmarc?days=${days}`),
+  dmarcData: (domainId: string, opts: { fromDate?: string | null, toDate?: string | null, days?: number } = {}) => {
+    const p = new URLSearchParams()
+    if (opts.fromDate) p.set('from_date', opts.fromDate)
+    if (opts.toDate)   p.set('to_date',   opts.toDate)
+    if (!opts.fromDate && opts.days) p.set('days', String(opts.days))
+    const qs = p.toString()
+    return request<any>(`/domains/${domainId}/dmarc${qs ? '?' + qs : ''}`)
+  },
+  dmarcHistogram:     (domainId: string) => request<any>(`/domains/${domainId}/dmarc/histogram`),
   dmarcRecordDiff:    (domainId: string) => request<any>(`/domains/${domainId}/dmarc/record-diff`),
   dmarcMarkPublished: (domainId: string) => request<any>(`/domains/${domainId}/dmarc/mark-published`, { method: 'POST' }),
 

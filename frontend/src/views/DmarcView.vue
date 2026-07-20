@@ -10,6 +10,7 @@ import RecordReviewModal from '@/components/domain/RecordReviewModal.vue'
 import DataDeadZone from '@/components/ui/DataDeadZone.vue'
 import ConceptCardButton from '@/components/ui/ConceptCardButton.vue'
 import DateRangeFilter from '@/components/ui/DateRangeFilter.vue'
+import ReportTimeline from '@/components/ui/ReportTimeline.vue'
 
 const route   = useRoute()
 const router  = useRouter()
@@ -18,6 +19,7 @@ const domains = useDomainsStore()
 const ALL = '__all__'
 const selected = ref<string>((route.query.domain as string) ?? ALL)
 const days            = ref(30)
+const timelineFilter  = ref<{ fromDate: string | null, toDate: string | null, reporters: string[] }>({ fromDate: null, toDate: null, reporters: [] })
 const data            = ref<any>(null)
 const diff            = ref<any>(null)
 const advisor         = ref<any>(null)
@@ -33,23 +35,47 @@ onMounted(async () => {
 
 watch(selected, () => {
   advisor.value = null
+  timelineFilter.value = { fromDate: null, toDate: null, reporters: [] }
   loadData(false)
 })
 watch(days, () => loadData(false))
+
+function onTimelineChange(f: { fromDate: string | null, toDate: string | null, reporters: string[] }) {
+  timelineFilter.value = f
+  loadData(false)
+}
+
+const filteredSources = computed(() => {
+  const sources = data.value?.sources ?? []
+  const reps = timelineFilter.value.reporters
+  if (!reps.length) return sources
+  return sources.filter((s: any) => reps.includes(s.source_org))
+})
+
+const filteredSubdomainGroups = computed(() => {
+  const groups = data.value?.subdomain_groups ?? []
+  const reps = timelineFilter.value.reporters
+  if (!reps.length) return groups
+  return groups.map((g: any) => ({
+    ...g,
+    sources: g.sources.filter((s: any) => reps.includes(s.source_org)),
+  })).filter((g: any) => g.sources.length > 0)
+})
 
 async function loadData(initialLoad = false) {
   loading.value = true
   data.value = null
   if (!initialLoad) advisorLoading.value = true
   const capturedSelection = selected.value
+  const { fromDate, toDate } = timelineFilter.value
   try {
     if (capturedSelection === ALL) {
-      const results = await Promise.all(domains.list.map(d => api.dmarcData(d.id, days.value)))
+      const results = await Promise.all(domains.list.map(d => api.dmarcData(d.id, { days: days.value })))
       data.value = mergeOverviews(results)
     } else {
       const dom = domains.list.find(d => d.domain === capturedSelection)
       if (!dom) { loading.value = false; advisorLoading.value = false; return }
-      data.value = await api.dmarcData(dom.id, days.value)
+      data.value = await api.dmarcData(dom.id, { fromDate, toDate })
     }
   } finally { loading.value = false }
 
@@ -147,7 +173,7 @@ const openGroups = ref<Set<string>>(new Set())
 const addingSubdomain = ref<string | null>(null)
 
 const hasSubdomainFold = computed(() =>
-  selected.value !== ALL && (data.value?.subdomain_groups?.length ?? 0) > 1
+  selected.value !== ALL && (filteredSubdomainGroups.value?.length ?? 0) > 1
 )
 
 watch(data, (d) => {
@@ -195,9 +221,18 @@ async function monitorSubdomain(hostname: string) {
       <button v-if="selected !== '__all__'" class="btn" @click="loadDiff">Review record →</button>
     </div>
 
-    <!-- Domain dropdown + date filter -->
-    <div class="domain-bar">
+    <!-- Timeline filter (single domain) or date pills (all domains) -->
+    <ReportTimeline
+      v-if="selected !== '__all__' && selectedDomainObj"
+      :domain-id="selectedDomainObj.id"
+      @change="onTimelineChange"
+    />
+    <div v-else-if="selected === '__all__'" style="margin-bottom:12px">
       <DateRangeFilter v-model="days" />
+    </div>
+
+    <!-- Domain dropdown -->
+    <div class="domain-bar">
       <div class="domain-select-wrap">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sel-icon"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
         <select v-model="selected" class="domain-select">
@@ -306,7 +341,7 @@ async function monitorSubdomain(hostname: string) {
       <!-- Folded by subdomain — the common case once a domain has real traffic,
            since most subdomains never need to be separately monitored. -->
       <div v-else-if="hasSubdomainFold" class="subfold-list">
-        <div v-for="g in data.subdomain_groups" :key="g.header_from" class="subfold">
+        <div v-for="g in filteredSubdomainGroups" :key="g.header_from" class="subfold">
           <div class="subfold-head" @click="toggleGroup(g.header_from)">
             <svg class="subfold-chev" :class="{ open: openGroups.has(g.header_from) }" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
               <path d="M9 18l6-6-6-6"/>
@@ -330,8 +365,8 @@ async function monitorSubdomain(hostname: string) {
       </div>
 
       <SourceTable
-        v-else-if="data?.sources && data.sources.length"
-        :sources="data.sources"
+        v-else-if="filteredSources.length"
+        :sources="filteredSources"
         @open-drawer="drawerIp = $event"
       />
       <DataDeadZone

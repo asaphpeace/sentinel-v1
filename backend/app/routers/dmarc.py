@@ -155,22 +155,80 @@ def _build_sources(aggs: list[DmarcAggregate]) -> list[DmarcSourceOut]:
     return sources
 
 
+@router.get("/histogram")
+async def get_dmarc_histogram(
+    domain_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Weekly bucketed report volume across ALL time — used to render the
+    histogram strip and data-extent context line in the DMARC view."""
+    from collections import defaultdict
+    domain = await _get_domain(domain_id, user.tenant_id, db)
+    result = await db.execute(
+        select(DmarcAggregate)
+        .where(DmarcAggregate.domain_id == domain.id)
+        .order_by(DmarcAggregate.period_begin)
+    )
+    aggs = result.scalars().all()
+
+    if not aggs:
+        return {"buckets": [], "earliest": None, "latest": None, "reporters": [], "total_reports": 0}
+
+    buckets: dict[str, dict] = defaultdict(lambda: {"total": 0, "pass_count": 0, "fail_count": 0, "report_count": 0})
+    for a in aggs:
+        pb = a.period_begin
+        if pb.tzinfo is None:
+            pb = pb.replace(tzinfo=timezone.utc)
+        week_start = (pb - timedelta(days=pb.weekday())).date().isoformat()
+        b = buckets[week_start]
+        b["total"]        += a.total_count
+        b["pass_count"]   += a.pass_count
+        b["fail_count"]   += a.fail_count
+        b["report_count"] += 1
+
+    sorted_buckets = [{"week_start": k, **v} for k, v in sorted(buckets.items())]
+    reporters = sorted({a.source_org for a in aggs if a.source_org})
+
+    def _iso(dt: datetime) -> str:
+        return dt.replace(tzinfo=timezone.utc).isoformat() if dt.tzinfo is None else dt.isoformat()
+
+    return {
+        "buckets":       sorted_buckets,
+        "earliest":      _iso(min(a.period_begin for a in aggs)),
+        "latest":        _iso(max(a.period_begin for a in aggs)),
+        "reporters":     reporters,
+        "total_reports": len(aggs),
+    }
+
+
 @router.get("", response_model=DmarcOverviewOut)
 async def get_dmarc_overview(
     domain_id: str,
-    days: int = Query(30, ge=1, le=365),
+    from_date: str | None = Query(None),
+    to_date:   str | None = Query(None),
+    days: int | None = Query(None, ge=1, le=3650),
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
     domain = await _get_domain(domain_id, user.tenant_id, db)
 
-    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
-    result = await db.execute(
-        select(DmarcAggregate).where(
-            DmarcAggregate.domain_id == domain.id,
-            DmarcAggregate.period_begin >= cutoff,
-        )
-    )
+    from sqlalchemy import and_
+    if from_date:
+        lo = datetime.fromisoformat(from_date).replace(tzinfo=timezone.utc)
+        hi = datetime.fromisoformat(to_date).replace(tzinfo=timezone.utc) if to_date else datetime.now(timezone.utc)
+        date_filter = and_(DmarcAggregate.period_begin >= lo, DmarcAggregate.period_begin <= hi)
+    elif days:
+        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+        date_filter = DmarcAggregate.period_begin >= cutoff
+    else:
+        date_filter = None  # all time
+
+    stmt = select(DmarcAggregate).where(DmarcAggregate.domain_id == domain.id)
+    if date_filter is not None:
+        stmt = stmt.where(date_filter)
+
+    result = await db.execute(stmt)
     aggs = result.scalars().all()
 
     if not aggs:
