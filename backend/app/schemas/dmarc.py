@@ -1,4 +1,5 @@
 from __future__ import annotations
+from datetime import datetime
 from pydantic import BaseModel
 
 
@@ -67,6 +68,10 @@ class DmarcSourceOut(BaseModel):
     classification_confidence: int
     recommended_action: str
     ips: list[DmarcIpOut]
+    # Period coverage — when this org's traffic was observed
+    earliest_period: datetime | None = None
+    latest_period: datetime | None = None
+    report_count: int = 0
 
 
 class DmarcComplianceOut(BaseModel):

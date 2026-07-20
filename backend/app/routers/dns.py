@@ -38,7 +38,7 @@ async def get_domain_dns_timeline(
     domain_id: str,
     limit: int = Query(50, le=200),
     offset: int = Query(0, ge=0),
-    days: int = Query(30, ge=1, le=365),
+    days: int | None = Query(None, ge=1, le=3650),
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
@@ -47,10 +47,12 @@ async def get_domain_dns_timeline(
     if not domain:
         raise HTTPException(status_code=404, detail="Domain not found")
 
-    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    where = [DnsRecord.domain_id == domain.id]
+    if days is not None:
+        where.append(DnsRecord.detected_at >= datetime.now(timezone.utc) - timedelta(days=days))
     stmt = (
         select(DnsRecord)
-        .where(DnsRecord.domain_id == domain.id, DnsRecord.detected_at >= cutoff)
+        .where(*where)
         .order_by(DnsRecord.detected_at.desc())
         .offset(offset)
         .limit(limit)
@@ -62,7 +64,7 @@ async def get_domain_dns_timeline(
 @router.get("/domains/{domain_id}/dns-timeline/count")
 async def get_domain_dns_timeline_count(
     domain_id: str,
-    days: int = Query(30, ge=1, le=365),
+    days: int | None = Query(None, ge=1, le=3650),
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
@@ -70,9 +72,11 @@ async def get_domain_dns_timeline_count(
     domain = result.scalar_one_or_none()
     if not domain:
         raise HTTPException(status_code=404, detail="Domain not found")
-    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    where = [DnsRecord.domain_id == domain.id]
+    if days is not None:
+        where.append(DnsRecord.detected_at >= datetime.now(timezone.utc) - timedelta(days=days))
     count = (await db.execute(
-        select(func.count()).where(DnsRecord.domain_id == domain.id, DnsRecord.detected_at >= cutoff)
+        select(func.count()).where(*where)
     )).scalar()
     return {"count": count}
 
@@ -81,7 +85,7 @@ async def get_domain_dns_timeline_count(
 async def get_tenant_dns_timeline(
     limit: int = Query(100, le=500),
     offset: int = Query(0, ge=0),
-    days: int = Query(30, ge=1, le=365),
+    days: int | None = Query(None, ge=1, le=3650),
     record_type: str | None = Query(None),
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
@@ -92,10 +96,12 @@ async def get_tenant_dns_timeline(
     )
     domains = {str(d.id): d.name for d in domains_result.scalars().all()}
 
-    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    where = [DnsRecord.domain_id.in_(list(domains.keys()))]
+    if days is not None:
+        where.append(DnsRecord.detected_at >= datetime.now(timezone.utc) - timedelta(days=days))
     stmt = (
         select(DnsRecord)
-        .where(DnsRecord.domain_id.in_(list(domains.keys())), DnsRecord.detected_at >= cutoff)
+        .where(*where)
         .order_by(DnsRecord.detected_at.desc())
         .offset(offset)
         .limit(limit)
@@ -109,7 +115,7 @@ async def get_tenant_dns_timeline(
 
 @router.get("/tenant/dns-timeline/count")
 async def get_tenant_dns_timeline_count(
-    days: int = Query(30, ge=1, le=365),
+    days: int | None = Query(None, ge=1, le=3650),
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
@@ -117,8 +123,10 @@ async def get_tenant_dns_timeline_count(
         select(Domain).where(Domain.tenant_id == user.tenant_id, Domain.is_active == True)
     )
     domain_ids = [str(d.id) for d in domains_result.scalars().all()]
-    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    where = [DnsRecord.domain_id.in_(domain_ids)]
+    if days is not None:
+        where.append(DnsRecord.detected_at >= datetime.now(timezone.utc) - timedelta(days=days))
     count = (await db.execute(
-        select(func.count()).where(DnsRecord.domain_id.in_(domain_ids), DnsRecord.detected_at >= cutoff)
+        select(func.count()).where(*where)
     )).scalar()
     return {"count": count}

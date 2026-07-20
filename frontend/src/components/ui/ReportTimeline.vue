@@ -145,6 +145,51 @@ const contextLine = computed(() => {
 })
 
 // Tick labels: show one label every N bars so they don't crowd
+// Manual date input refs — updated by histogram selection and vice-versa
+const inputFrom = ref<string>('')
+const inputTo   = ref<string>('')
+
+function onInputFrom(e: Event) {
+  const val = (e.target as HTMLInputElement).value
+  inputFrom.value = val
+  if (!val) { selectAll(); return }
+  // Snap histogram selection to nearest bucket >= this date
+  const idx = buckets.value.findIndex((b: any) => b.week_start >= val)
+  fromIdx.value = idx === -1 ? 0 : idx
+  toIdx.value   = toIdx.value === null ? buckets.value.length - 1 : Math.max(fromIdx.value, toIdx.value)
+  emitChange()
+}
+
+function onInputTo(e: Event) {
+  const val = (e.target as HTMLInputElement).value
+  inputTo.value = val
+  if (!val) { if (!inputFrom.value) { selectAll(); return } }
+  // Snap histogram selection to last bucket whose week_start <= val
+  let idx = -1
+  for (let i = buckets.value.length - 1; i >= 0; i--) {
+    if (buckets.value[i].week_start <= val) { idx = i; break }
+  }
+  toIdx.value   = idx === -1 ? buckets.value.length - 1 : idx
+  fromIdx.value = fromIdx.value === null ? 0 : Math.min(fromIdx.value, toIdx.value)
+  emitChange()
+}
+
+// Keep inputs in sync when histogram selection changes
+watch([selFrom, selTo], () => {
+  if (selFrom.value === null) {
+    inputFrom.value = ''
+    inputTo.value   = ''
+  } else {
+    inputFrom.value = buckets.value[selFrom.value]?.week_start ?? ''
+    const ws = buckets.value[selTo.value!]?.week_start
+    if (ws) {
+      const d = new Date(ws + 'T00:00:00Z')
+      d.setUTCDate(d.getUTCDate() + 6)
+      inputTo.value = d.toISOString().split('T')[0]
+    }
+  }
+})
+
 const tickLabels = computed(() => {
   const n = buckets.value.length
   if (n === 0) return []
@@ -196,7 +241,7 @@ const tickLabels = computed(() => {
       </div>
     </div>
 
-    <!-- Controls row: presets + clear -->
+    <!-- Controls row: presets + date inputs + clear -->
     <div v-if="buckets.length" class="rt-controls">
       <div class="rt-presets">
         <button class="rt-preset" :class="{ active: selFrom === null }" @click="selectAll">All time</button>
@@ -204,7 +249,12 @@ const tickLabels = computed(() => {
         <button class="rt-preset" @click="setPreset(3)">Last 3 months</button>
         <button class="rt-preset" @click="setPreset(6)">Last 6 months</button>
       </div>
-      <button v-if="selFrom !== null" class="rt-clear" @click="selectAll">✕ Clear selection</button>
+      <div class="rt-date-inputs">
+        <input type="date" class="rt-date-input" :value="inputFrom" @change="onInputFrom" :min="histogram?.earliest?.slice(0,10)" :max="histogram?.latest?.slice(0,10)" title="From date" />
+        <span class="rt-date-sep">–</span>
+        <input type="date" class="rt-date-input" :value="inputTo" @change="onInputTo" :min="histogram?.earliest?.slice(0,10)" :max="histogram?.latest?.slice(0,10)" title="To date" />
+      </div>
+      <button v-if="selFrom !== null" class="rt-clear" @click="selectAll">✕ Clear</button>
     </div>
 
     <!-- Reporter pills -->
@@ -297,6 +347,18 @@ const tickLabels = computed(() => {
   background: none; border: none; cursor: pointer; padding: 0;
 }
 .rt-clear:hover { color: var(--bad); }
+
+/* Date inputs */
+.rt-date-inputs { display: flex; align-items: center; gap: 4px; }
+.rt-date-input {
+  font-family: var(--mono); font-size: 10.5px; padding: 4px 8px;
+  background: rgba(255,255,255,.04); border: 1px solid var(--line2);
+  border-radius: 7px; color: var(--txt); outline: none;
+  transition: border-color .15s; cursor: pointer;
+}
+.rt-date-input:focus { border-color: rgba(91,110,245,.5); }
+.rt-date-input::-webkit-calendar-picker-indicator { filter: invert(.5) sepia(1) hue-rotate(190deg); cursor: pointer; }
+.rt-date-sep { font-family: var(--mono); font-size: 10px; color: var(--faint); }
 
 /* Reporter pills */
 .rt-reporters {

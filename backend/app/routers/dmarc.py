@@ -137,6 +137,8 @@ def _build_sources(aggs: list[DmarcAggregate]) -> list[DmarcSourceOut]:
         dkim_aligned_org = any(a.dkim_aligned for a in org_aggs)
         spf_aligned_org = any(a.spf_aligned for a in org_aggs)
 
+        period_begins = [a.period_begin for a in org_aggs if a.period_begin]
+        period_ends   = [a.period_end   for a in org_aggs if a.period_end]
         sources.append(DmarcSourceOut(
             source_org=org,
             volume=org_vol,
@@ -149,6 +151,9 @@ def _build_sources(aggs: list[DmarcAggregate]) -> list[DmarcSourceOut]:
             classification_confidence=cls["confidence"],
             recommended_action=cls["action"],
             ips=sorted(ips, key=lambda x: x.volume, reverse=True),
+            earliest_period=min(period_begins) if period_begins else None,
+            latest_period=max(period_ends) if period_ends else None,
+            report_count=len(org_aggs),
         ))
 
     sources.sort(key=lambda s: s.volume, reverse=True)

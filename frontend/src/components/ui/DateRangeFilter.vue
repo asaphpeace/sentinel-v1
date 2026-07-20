@@ -1,14 +1,14 @@
 <script setup lang="ts">
-const props = defineProps<{ modelValue: number }>()
-const emit  = defineEmits<{ 'update:modelValue': [days: number] }>()
+const props = defineProps<{ modelValue: number | null }>()
+const emit  = defineEmits<{ 'update:modelValue': [days: number | null] }>()
 
-const PRESETS = [
-  { label: '7d',  days: 7 },
-  { label: '30d', days: 30 },
-  { label: '60d', days: 60 },
-  { label: '90d', days: 90 },
-  { label: '6m',  days: 180 },
-  { label: '1y',  days: 365 },
+const PRESETS: { label: string; days: number | null }[] = [
+  { label: 'All',  days: null },
+  { label: '7d',   days: 7 },
+  { label: '30d',  days: 30 },
+  { label: '90d',  days: 90 },
+  { label: '6m',   days: 180 },
+  { label: '1y',   days: 365 },
 ]
 </script>
 
@@ -18,7 +18,7 @@ const PRESETS = [
     <div class="drf-pills">
       <button
         v-for="p in PRESETS"
-        :key="p.days"
+        :key="String(p.days)"
         class="pill"
         :class="{ active: modelValue === p.days }"
         @click="emit('update:modelValue', p.days)"

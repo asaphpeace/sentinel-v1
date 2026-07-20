@@ -119,11 +119,25 @@ export const api = {
   certs:      (domainId: string) => request<any[]>(`/domains/${domainId}/certs`),
   probeCerts: (domainId: string) => request<any>(`/domains/${domainId}/certs/probe`, { method: 'POST' }),
 
-  // DNS
-  dnsTimeline:       (domainId: string, limit = 50, offset = 0, days = 30) => request<any[]>(`/domains/${domainId}/dns-timeline?limit=${limit}&offset=${offset}&days=${days}`),
-  dnsTimelineCount:  (domainId: string, days = 30) => request<any>(`/domains/${domainId}/dns-timeline/count?days=${days}`),
-  dnsTenantTimeline: (limit = 100, offset = 0, days = 30) => request<any[]>(`/tenant/dns-timeline?limit=${limit}&offset=${offset}&days=${days}`),
-  dnsTenantCount:    (days = 30) => request<any>(`/tenant/dns-timeline/count?days=${days}`),
+  // DNS — days=null means all time (no cutoff)
+  dnsTimeline:       (domainId: string, limit = 50, offset = 0, days: number | null = null) => {
+    const p = new URLSearchParams({ limit: String(limit), offset: String(offset) })
+    if (days !== null) p.set('days', String(days))
+    return request<any[]>(`/domains/${domainId}/dns-timeline?${p}`)
+  },
+  dnsTimelineCount:  (domainId: string, days: number | null = null) => {
+    const p = days !== null ? `?days=${days}` : ''
+    return request<any>(`/domains/${domainId}/dns-timeline/count${p}`)
+  },
+  dnsTenantTimeline: (limit = 100, offset = 0, days: number | null = null) => {
+    const p = new URLSearchParams({ limit: String(limit), offset: String(offset) })
+    if (days !== null) p.set('days', String(days))
+    return request<any[]>(`/tenant/dns-timeline?${p}`)
+  },
+  dnsTenantCount:    (days: number | null = null) => {
+    const p = days !== null ? `?days=${days}` : ''
+    return request<any>(`/tenant/dns-timeline/count${p}`)
+  },
 
   // Concept Cards
   conceptRender: (id: string, context: Record<string, any> = {}) =>

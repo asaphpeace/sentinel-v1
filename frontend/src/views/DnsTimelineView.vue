@@ -12,7 +12,7 @@ const loading      = ref(false)
 const syncing      = ref(false)
 const filterType   = ref<string>('all')
 const domainFilter = ref<string>('all')
-const days         = ref(30)
+const days         = ref<number | null>(null)
 const offset       = ref(0)
 const totalCount   = ref(0)
 const lastSyncedAt = ref<string | null>(null)
@@ -122,32 +122,35 @@ const removedCount = computed(() => timeline.value.filter(e => e.change_type ===
 
 const hasMore = computed(() => timeline.value.length < totalCount.value)
 
-// Group filtered entries by calendar date
+// UTC date string "YYYY-MM-DD" from any Date
+function utcDateStr(d: Date): string {
+  return d.toISOString().slice(0, 10)
+}
+
+// Group filtered entries by UTC calendar date
 const grouped = computed(() => {
-  const groups: { date: string; entries: any[] }[] = []
-  let lastDate = ''
+  const todayStr     = utcDateStr(new Date())
+  const yesterday    = new Date(); yesterday.setUTCDate(yesterday.getUTCDate() - 1)
+  const yesterdayStr = utcDateStr(yesterday)
+
+  const groups: { date: string; dateKey: string; entries: any[] }[] = []
+  let lastKey = ''
   for (const e of filtered.value) {
     const d = new Date(e.detected_at)
-    const label = isToday(d) ? 'Today'
-      : isYesterday(d) ? 'Yesterday'
-      : d.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
-    if (label !== lastDate) {
-      groups.push({ date: label, entries: [] })
-      lastDate = label
+    const key = utcDateStr(d)
+    const label = key === todayStr
+      ? 'Today'
+      : key === yesterdayStr
+      ? 'Yesterday'
+      : d.toLocaleDateString('en-GB', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' })
+    if (key !== lastKey) {
+      groups.push({ date: label, dateKey: key, entries: [] })
+      lastKey = key
     }
     groups[groups.length - 1].entries.push(e)
   }
   return groups
 })
-
-function isToday(d: Date) {
-  const now = new Date()
-  return d.toDateString() === now.toDateString()
-}
-function isYesterday(d: Date) {
-  const y = new Date(); y.setDate(y.getDate() - 1)
-  return d.toDateString() === y.toDateString()
-}
 </script>
 
 <template>
@@ -250,7 +253,11 @@ function isYesterday(d: Date) {
         <svg viewBox="0 0 24 24" fill="none" stroke="var(--faint)" stroke-width="1.5">
           <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>
         </svg>
-        <div>No DNS change events found.</div>
+        <div v-if="timeline.length > 0 && filterType !== 'all'">
+          No <b>{{ filterType }}</b> events match the current filter.
+          <span class="empty-hint" @click="filterType = 'all'">Show all {{ totalCount }} events →</span>
+        </div>
+        <div v-else>No DNS change events found.</div>
         <div class="empty-sub">
           Click "Check now" to scan live DNS records. Changes are detected automatically on each check.
         </div>
@@ -258,9 +265,10 @@ function isYesterday(d: Date) {
 
       <template v-else>
         <!-- Date-grouped entries -->
-        <div v-for="group in grouped" :key="group.date">
+        <div v-for="(group, gi) in grouped" :key="group.date">
           <div class="date-divider">
             <span class="date-label">{{ group.date }}</span>
+            <span v-if="gi === grouped.length - 1 && group.entries.every(e => e.change_type === 'added')" class="baseline-badge" title="These are the records Sentinel found when this domain was first scanned — not changes from a prior state.">Initial scan</span>
           </div>
           <TimelineEntry
             v-for="entry in group.entries"
@@ -370,4 +378,10 @@ h1 { font-family: var(--disp); font-weight: 800; font-size: 25px; letter-spacing
 .empty-state svg { width: 36px; height: 36px; margin-bottom: 4px; }
 .empty-state div { font-family: var(--mono); font-size: 12.5px; color: var(--muted); }
 .empty-sub { font-size: 11px !important; color: var(--faint) !important; text-align: center; max-width: 360px; line-height: 1.6; }
+.empty-hint { color: var(--teal); cursor: pointer; margin-left: 6px; text-decoration: underline; }
+.baseline-badge {
+  font-family: var(--mono); font-size: 9px; letter-spacing: .6px; text-transform: uppercase;
+  color: var(--faint); background: rgba(255,255,255,.04); border: 1px solid var(--line2);
+  border-radius: 5px; padding: 2px 6px; margin-left: 6px;
+}
 </style>

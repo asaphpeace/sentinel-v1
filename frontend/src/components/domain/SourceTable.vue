@@ -30,6 +30,22 @@ function openClassification(source: any) {
   })
 }
 
+function fmtPeriod(iso: string | null | undefined): string {
+  if (!iso) return '?'
+  const d = new Date(iso)
+  return d.toLocaleDateString('en-GB', { month: 'short', day: 'numeric', timeZone: 'UTC' })
+}
+
+function relativeActive(iso: string | null | undefined): string {
+  if (!iso) return ''
+  const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000)
+  if (diff === 0) return 'active today'
+  if (diff === 1) return 'active yesterday'
+  if (diff < 7) return `active ${diff}d ago`
+  if (diff < 30) return `active ${Math.floor(diff / 7)}w ago`
+  return `active ${Math.floor(diff / 30)}mo ago`
+}
+
 const mini = (v: string | null) => {
   if (!v) return 'f'
   if (v === 'pass') return 'p'
@@ -68,7 +84,16 @@ function envelopeState(ip: any): 'clean' | 'esp' | 'mismatch' {
             <div class="si">{{ src.ips[0]?.rdns || src.ips[0]?.source_ip || '' }}</div>
           </div>
         </div>
-        <div class="vol">{{ src.volume.toLocaleString() }}</div>
+        <div class="vol-cell">
+          <div class="vol">{{ src.volume.toLocaleString() }}</div>
+          <div v-if="src.report_count" class="vol-period">
+            {{ src.report_count }} report{{ src.report_count !== 1 ? 's' : '' }}
+            <template v-if="src.earliest_period"> · {{ fmtPeriod(src.earliest_period) }}
+              <template v-if="src.latest_period && fmtPeriod(src.latest_period) !== fmtPeriod(src.earliest_period)"> – {{ fmtPeriod(src.latest_period) }}</template>
+            </template>
+          </div>
+          <div v-if="src.latest_period" class="vol-relative">{{ relativeActive(src.latest_period) }}</div>
+        </div>
         <StatusChip variant="am" :value="src.spf_alignment" />
         <StatusChip variant="am" :value="src.dkim_alignment === 'NONE' ? 'NONE' : src.dkim_alignment" />
         <StatusChip variant="am" :value="src.dmarc_result" />
@@ -145,7 +170,10 @@ function envelopeState(ip: any): 'clean' | 'esp' | 'mismatch' {
 .srci { width: 30px; height: 30px; border-radius: 9px; background: rgba(255,255,255,.06); display: grid; place-items: center; font-family: var(--disp); font-weight: 700; font-size: 12px; flex: none; }
 .sn { font-size: 13px; font-weight: 600; }
 .si { font-family: var(--mono); font-size: 10px; color: var(--faint); }
+.vol-cell { display: flex; flex-direction: column; gap: 2px; }
 .vol { font-family: var(--mono); font-size: 12.5px; }
+.vol-period { font-family: var(--mono); font-size: 9px; color: var(--faint); letter-spacing: .2px; }
+.vol-relative { font-family: var(--mono); font-size: 9px; color: var(--teal); opacity: .7; }
 .cls-chip { font-size: 10px; font-weight: 600; padding: 5px 10px; border-radius: 20px; cursor: pointer; transition: .15s; }
 .cls-chip:hover { opacity: .8; }
 .cls-chip.authorized { background: rgba(52,224,161,.14); color: var(--good); }
