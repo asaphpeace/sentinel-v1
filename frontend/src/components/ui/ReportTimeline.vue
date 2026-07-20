@@ -94,7 +94,7 @@ function setPreset(months: number) {
 
 function toggleReporter(r: string) {
   const next = new Set(selectedReporters.value)
-  if (next.has(r)) next.delete(r) else next.add(r)
+  if (next.has(r)) { next.delete(r) } else { next.add(r) }
   selectedReporters.value = next
   emitChange()
 }
