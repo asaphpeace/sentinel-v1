@@ -144,6 +144,171 @@ async def _record_change(
     asyncio.create_task(_bg_risk(record_id))
 
 
+def _spf_summary(previous: str | None, current: str | None) -> str:
+    if previous is None:
+        return "SPF record published for the first time"
+    if current is None:
+        return "SPF record removed — domain is now unprotected against spoofing"
+
+    def _includes(val: str) -> set[str]:
+        return {t for t in val.split() if t.startswith("include:")}
+
+    def _mechanisms(val: str) -> set[str]:
+        return {t for t in val.split() if not t.startswith("v=") and not t.startswith("include:")}
+
+    def _policy(val: str) -> str:
+        for t in val.split():
+            if t in ("+all", "-all", "~all", "?all", "all"):
+                return t
+        return "none"
+
+    added_inc   = _includes(current)   - _includes(previous)
+    removed_inc = _includes(previous)  - _includes(current)
+    prev_pol    = _policy(previous)
+    curr_pol    = _policy(current)
+
+    parts = []
+    if added_inc:
+        parts.append(f"added sender(s): {', '.join(sorted(added_inc))}")
+    if removed_inc:
+        parts.append(f"removed sender(s): {', '.join(sorted(removed_inc))}")
+    if prev_pol != curr_pol:
+        direction = "tightened" if curr_pol in ("-all",) else "relaxed" if curr_pol in ("~all", "?all", "+all") else "changed"
+        parts.append(f"enforcement {direction}: {prev_pol} → {curr_pol}")
+    if not parts:
+        parts.append("record content modified")
+    return "SPF record updated — " + "; ".join(parts)
+
+
+def _dmarc_summary(previous: str | None, current: str | None) -> str:
+    if previous is None:
+        return "DMARC record published for the first time"
+    if current is None:
+        return "DMARC record removed — domain has no DMARC policy"
+
+    def _tag(val: str, tag: str) -> str | None:
+        for part in val.split(";"):
+            part = part.strip()
+            if part.lower().startswith(tag + "="):
+                return part.split("=", 1)[1].strip()
+        return None
+
+    prev_p = _tag(previous, "p")
+    curr_p = _tag(current, "p")
+    prev_pct = _tag(previous, "pct")
+    curr_pct = _tag(current, "pct")
+    prev_sp = _tag(previous, "sp")
+    curr_sp = _tag(current, "sp")
+
+    _tighten_order = ["none", "quarantine", "reject"]
+
+    parts = []
+    if prev_p != curr_p and prev_p and curr_p:
+        try:
+            direction = "tightened" if _tighten_order.index(curr_p) > _tighten_order.index(prev_p) else "relaxed"
+        except ValueError:
+            direction = "changed"
+        parts.append(f"policy {direction}: p={prev_p} → p={curr_p}")
+    if prev_pct != curr_pct:
+        parts.append(f"coverage changed: pct={prev_pct or '100'} → pct={curr_pct or '100'}")
+    if prev_sp != curr_sp:
+        parts.append(f"subdomain policy changed: sp={prev_sp or 'inherit'} → sp={curr_sp or 'inherit'}")
+    if not parts:
+        parts.append("reporting or other tag modified")
+    return "DMARC record updated — " + "; ".join(parts)
+
+
+def _mta_sts_summary(previous: str | None, current: str | None) -> str:
+    if previous is None:
+        return "MTA-STS TXT record published for the first time"
+    if current is None:
+        return "MTA-STS TXT record removed — MTA-STS enforcement is no longer signalled"
+
+    def _count(val: str) -> int:
+        return len([p for p in val.split(" | ") if p.strip()])
+
+    def _id(val: str) -> str | None:
+        for part in val.replace(" | ", ";").split(";"):
+            part = part.strip()
+            if part.lower().startswith("id="):
+                return part.split("=", 1)[1].strip()
+        return None
+
+    curr_count = _count(current)
+    if curr_count > 1:
+        return (
+            f"Duplicate MTA-STS TXT records detected — {curr_count} records found at this host. "
+            "Only one v=STSv1 record is valid; receiving servers will behave unpredictably. "
+            "Remove all but the current record from your DNS provider."
+        )
+
+    prev_id = _id(previous)
+    curr_id = _id(current)
+    if prev_id and curr_id and prev_id != curr_id:
+        return (
+            f"MTA-STS policy ID updated — id= changed from {prev_id} to {curr_id}. "
+            "This is expected whenever you publish a new MTA-STS policy file. No action needed if you made this change."
+        )
+
+    return "MTA-STS TXT record modified"
+
+
+def _mx_summary(previous: str | None, current: str | None) -> str:
+    if previous is None:
+        return "MX records published for the first time"
+    if current is None:
+        return "All MX records removed — domain can no longer receive email"
+
+    prev_set = set(previous.split(" | "))
+    curr_set = set(current.split(" | "))
+    added   = curr_set - prev_set
+    removed = prev_set - curr_set
+    parts = []
+    if added:
+        parts.append(f"added: {', '.join(sorted(added))}")
+    if removed:
+        parts.append(f"removed: {', '.join(sorted(removed))}")
+    if not parts:
+        return "MX records modified"
+    return "MX records changed — " + "; ".join(parts)
+
+
+def _build_summary(record_type: str, previous: str | None, current: str | None, host: str = "") -> str:
+    if record_type == "SPF":
+        return _spf_summary(previous, current)
+    if record_type == "DMARC":
+        return _dmarc_summary(previous, current)
+    if record_type == "MTA-STS":
+        return _mta_sts_summary(previous, current)
+    if record_type == "MX":
+        return _mx_summary(previous, current)
+    if record_type == "DKIM":
+        sel = host.split("._domainkey.")[0] if "._domainkey." in host else host
+        if previous is None:
+            return f"DKIM key published for selector {sel}"
+        if current is None:
+            return f"DKIM key removed for selector {sel}"
+        return f"DKIM key rotated for selector {sel}"
+    if record_type == "TLS-RPT":
+        if previous is None:
+            return "TLS-RPT reporting record published"
+        if current is None:
+            return "TLS-RPT reporting record removed"
+        return "TLS-RPT reporting address changed"
+    if record_type == "CNAME":
+        if previous is None:
+            return f"CNAME created: {host} → {current}"
+        if current is None:
+            return f"CNAME removed from {host}"
+        return f"CNAME changed: {previous} → {current}"
+    # fallback
+    if previous is None:
+        return f"{record_type} record created"
+    if current is None:
+        return f"{record_type} record removed"
+    return f"{record_type} record changed"
+
+
 async def poll_domain_dns(db: AsyncSession, domain: Domain) -> list[dict]:
     """
     Check all DNS records for a domain and store changes.
@@ -166,13 +331,7 @@ async def poll_domain_dns(db: AsyncSession, domain: Domain) -> list[dict]:
         previous = await _last_value(db, domain.id, record_type, host)
 
         if current != previous:
-            if previous is None and current is not None:
-                summary = f"{record_type} record created"
-            elif current is None:
-                summary = f"{record_type} record removed"
-            else:
-                summary = f"{record_type} record changed"
-
+            summary = _build_summary(record_type, previous, current, host)
             await _record_change(db, domain.id, domain.tenant_id, record_type, host, previous, current, summary, name)
             changes.append({"type": record_type, "host": host, "summary": summary, "value": current})
 
@@ -182,7 +341,7 @@ async def poll_domain_dns(db: AsyncSession, domain: Domain) -> list[dict]:
         current = await _txt_lookup(host)
         previous = await _last_value(db, domain.id, "DKIM", host)
         if current != previous:
-            summary = f"DKIM selector {sel}._domainkey {'added' if previous is None else 'changed' if current else 'removed'}"
+            summary = _build_summary("DKIM", previous, current, host)
             await _record_change(db, domain.id, domain.tenant_id, "DKIM", host, previous, current, summary, name)
             changes.append({"type": "DKIM", "host": host, "summary": summary, "value": current})
 
