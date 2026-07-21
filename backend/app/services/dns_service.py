@@ -34,7 +34,7 @@ async def _txt_lookup(name: str) -> str | None:
         parts = []
         for rdata in answers:
             parts.append("".join(s.decode() for s in rdata.strings))
-        return " | ".join(parts) if parts else None
+        return " | ".join(sorted(parts)) if parts else None
     except dns.exception.DNSException:
         return None
 
